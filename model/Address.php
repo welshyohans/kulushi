@@ -30,23 +30,35 @@ class Address{
     }
     
     public function insertAddress($subCity){
-        $query = "INSERT INTO address (id, city, sub_city, commission_address) VALUES (NULL, 'Addis Abeba', '$subCity', '2')";
+        // Use prepared statements to prevent SQL injection
+        $query = "INSERT INTO address (city, sub_city, commission_address) VALUES (:city, :sub_city, :commission)";
         
-        $stmt = $this->conn->exec($query);
+        $stmt = $this->conn->prepare($query);
+        
+        // Bind values
+        $stmt->bindValue(':city', 'Addis Abeba');
+        $stmt->bindValue(':sub_city', $subCity);
+        $stmt->bindValue(':commission', '2');
+        
+        $stmt->execute();
         $last_id = $this->conn->lastInsertId();
         
-        
-        $q = "INSERT INTO deliver_time (id, address_id, when_to_deliver, deliver_at, active_deliver) VALUES (NULL, '$last_id', 'ሁሌም ከ ሰኞ እስከ ቀዳሜ ከ 3 ሰአት ጀምሮ እናደርሳለን!!', current_timestamp(), 'በሰአታችን እናደርሳለን!!');";
-        
-        $s = $this->conn->exec($q);
-       
+        // Also use prepared statement for the second insert
+        $q = "INSERT INTO deliver_time (address_id, when_to_deliver, active_deliver) VALUES (:address_id, :when_to_deliver, :active_deliver)";
+        $s = $this->conn->prepare($q);
+        $s->bindValue(':address_id', $last_id);
+        $s->bindValue(':when_to_deliver', 'ሁሌም ከ ሰኞ እስከ ቀዳሜ ከ 3 ሰአት ጀምሮ እናደርሳለን!!');
+        $s->bindValue(':active_deliver', 'በሰአታችን እናደርሳለን!!');
+        $s->execute();
     }
     
     public function updateAddressCommission($addressId,$value){
-          
-          $query = "UPDATE address SET commission_address = '$value' WHERE address.id = '$addressId'";
-        
-        $stmt = $this->conn->exec($query);
+        // Use prepared statements here as well
+        $query = "UPDATE address SET commission_address = :value WHERE address.id = :addressId";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':value', $value);
+        $stmt->bindValue(':addressId', $addressId);
+        $stmt->execute();
     }
 
 }
