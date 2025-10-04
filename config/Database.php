@@ -11,7 +11,7 @@ class Database{
 
         //db params
         private $host = 'ruby.premium.hostns.io';
-        private $db_name = 'astemaos_astemari';
+        private $db_name = 'astemaos_mpro';
         private $username = 'astemaos_welsh';
         private $password = '7@dw35ZfrtXzCtM';
 
