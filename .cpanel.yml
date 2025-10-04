@@ -1,0 +1,4 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/astemaos/public_html/kulushi/
+    - /bin/cp -R * $DEPLOYPATH
