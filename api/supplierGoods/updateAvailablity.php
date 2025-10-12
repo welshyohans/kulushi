@@ -55,7 +55,7 @@ try {
 
     $db->beginTransaction();
 
-    // Increment settings.last_update_code and use the new value for last_update_available only
+    // Increment settings.last_update_code and propagate the new value to the relation
     $code = $settings->nextCode();
 
     $affected = $sgModel->updateAvailability($supplierId, $goodsId, $isAvailable, (int)$code);
@@ -68,7 +68,7 @@ try {
         'supplier_id' => $supplierId,
         'goods_id' => $goodsId,
         'affected' => $affected,
-        'last_update_available' => (int)$code
+        'last_update_code' => (int)$code
     ]);
 } catch (PDOException $e) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {

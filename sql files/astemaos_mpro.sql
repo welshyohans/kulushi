@@ -81,7 +81,6 @@ CREATE TABLE `category` (
   `name` varchar(100) NOT NULL,
   `image_url` varchar(100) NOT NULL,
   `is_available` tinyint(1) NOT NULL DEFAULT 0,
-  `last_update_availability` int(11) NOT NULL,
   `last_update_code` int(11) NOT NULL,
   `priority` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
@@ -169,7 +168,6 @@ CREATE TABLE `goods` (
   `priority` int(11) NOT NULL,
   `show_in_home` tinyint(1) NOT NULL,
   `image_url` varchar(100) NOT NULL,
-  `last_update_priority` int(11) NOT NULL DEFAULT 0,
   `last_update_code` int(11) NOT NULL,
   `last_update` timestamp NOT NULL DEFAULT current_timestamp(),
   `star_value` decimal(10,0) NOT NULL,
@@ -314,6 +312,7 @@ CREATE TABLE `supplier` (
   `password` varchar(20) NOT NULL,
   `image` varchar(100) NOT NULL,
   `isVisible` int(11) NOT NULL,
+  `last_update_code` int(11) NOT NULL,
   `last_update` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'this is the last date the shop owner update... to show them to retailers'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
@@ -333,9 +332,7 @@ CREATE TABLE `supplier_goods` (
   `min_order` int(11) NOT NULL DEFAULT 1,
   `is_available_for_credit` int(11) NOT NULL DEFAULT 0,
   `is_available` int(11) NOT NULL,
-  `last_update_code` int(11) NOT NULL,
-  `last_update_price` int(11) NOT NULL,
-  `last_update_available` int(11) NOT NULL
+  `last_update_code` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 
 -- --------------------------------------------------------

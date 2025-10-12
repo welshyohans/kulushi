@@ -48,7 +48,7 @@ if (!array_key_exists('customerId', $data)) {
 }
 
 $customerId = (int)$data['customerId'];
-$clientLastCode = array_key_exists('lastUpdateCode', $data) ? (int)$data['lastUpdateCode'] : 0;
+$requestedCode = array_key_exists('lastUpdateCode', $data) ? (int)$data['lastUpdateCode'] : 0;
 $fcmCode = array_key_exists('fcmCode', $data) ? trim((string)$data['fcmCode']) : null;
 
 try {
@@ -82,6 +82,8 @@ try {
     }
     $addressName = implode(', ', $addressParts);
 
+    $currentLastCode = (int)$settingsModel->getValue('last_update_code', 0);
+
     $settingsSnapshot = [
         'customerId' => $customerId,
         'customerName' => $customer['name'],
@@ -90,18 +92,20 @@ try {
         'addressName' => $addressName,
         'totalCredit' => (int)$customer['total_credit'],
         'expireTime' => (int)$settingsModel->getValue('expire_time', 0),
-        'lastUpdateCode' => (int)$settingsModel->getValue('last_update_code', 0),
-        'requestedLastUpdateCode' => $clientLastCode
+        'lastUpdateCode' => $currentLastCode,
+        'requestedLastUpdateCode' => $requestedCode
     ];
+
+    $params = [':code' => $requestedCode];
 
     $payload = [
         'success' => true,
-        'message' => 'First time data snapshot',
+        'message' => 'Data sync payload',
         'settings' => $settingsSnapshot,
-        'listOfCategory' => fetchRows($db, 'SELECT * FROM category ORDER BY id ASC'),
-        'listOfGoods' => fetchRows($db, 'SELECT * FROM goods ORDER BY id ASC'),
-        'listOfSuppliers' => fetchRows($db, 'SELECT * FROM supplier ORDER BY shop_id ASC'),
-        'listOfSupplierGoods' => fetchRows($db, 'SELECT * FROM supplier_goods ORDER BY id ASC')
+        'listOfCategory' => fetchRows($db, 'SELECT * FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC', $params),
+        'listOfGoods' => fetchRows($db, 'SELECT * FROM goods WHERE last_update_code > :code ORDER BY last_update_code ASC', $params),
+        'listOfSuppliers' => fetchRows($db, 'SELECT * FROM supplier WHERE last_update_code > :code ORDER BY last_update_code ASC', $params),
+        'listOfSupplierGoods' => fetchRows($db, 'SELECT * FROM supplier_goods WHERE last_update_code > :code ORDER BY last_update_code ASC', $params)
     ];
 
     $response(200, $payload);

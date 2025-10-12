@@ -65,7 +65,7 @@ try {
 
     $db->beginTransaction();
 
-    // Increment settings.last_update_code and use the new value for last_update_price only
+    // Increment settings.last_update_code and propagate the new value to the relation
     $code = $settings->nextCode();
 
     $affected = $sgModel->updatePrice($supplierId, $goodsId, $payload, (int)$code);
@@ -82,7 +82,6 @@ try {
         'discount_price' => $payload['discount_price'],
         'min_order' => $payload['min_order'],
         'is_available_for_credit' => $payload['is_available_for_credit'],
-        'last_update_price' => (int)$code,
         'last_update_code' => (int)$code
     ]);
 } catch (PDOException $e) {

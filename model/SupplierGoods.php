@@ -31,7 +31,7 @@ class SupplierGoods {
         $required = [
             'supplier_id','goods_id','price','discount_start','discount_price',
             'min_order','is_available_for_credit','is_available',
-            'last_update_code','last_update_price','last_update_available'
+            'last_update_code'
         ];
         foreach ($required as $k) {
             if (!array_key_exists($k, $data)) {
@@ -41,10 +41,10 @@ class SupplierGoods {
 
         $sql = "INSERT INTO supplier_goods
                 (supplier_id, goods_id, price, discount_start, discount_price, min_order, is_available_for_credit, is_available,
-                 last_update_code, last_update_price, last_update_available)
+                 last_update_code)
                 VALUES
                 (:supplier_id, :goods_id, :price, :discount_start, :discount_price, :min_order, :is_available_for_credit, :is_available,
-                 :last_update_code, :last_update_price, :last_update_available)";
+                 :last_update_code)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindValue(':supplier_id', (int)$data['supplier_id'], PDO::PARAM_INT);
         $stmt->bindValue(':goods_id', (int)$data['goods_id'], PDO::PARAM_INT);
@@ -55,8 +55,6 @@ class SupplierGoods {
         $stmt->bindValue(':is_available_for_credit', (int)$data['is_available_for_credit'], PDO::PARAM_INT);
         $stmt->bindValue(':is_available', (int)$data['is_available'], PDO::PARAM_INT);
         $stmt->bindValue(':last_update_code', (int)$data['last_update_code'], PDO::PARAM_INT);
-        $stmt->bindValue(':last_update_price', (int)$data['last_update_price'], PDO::PARAM_INT);
-        $stmt->bindValue(':last_update_available', (int)$data['last_update_available'], PDO::PARAM_INT);
         $stmt->execute();
         return (int)$this->conn->lastInsertId();
     }
@@ -80,7 +78,7 @@ class SupplierGoods {
         return $stmt->rowCount();
     }
 
-    // Upsert helper: create or update relation; on create, initialize last_update_price/available with same code to satisfy NOT NULL
+    // Upsert helper: create or update relation while keeping last_update_code consistent
     public function upsertRelation(array $data, int $lastUpdateCode): array {
         $existing = $this->findBySupplierAndGoods((int)$data['supplier_id'], (int)$data['goods_id']);
         if ($existing) {
@@ -107,9 +105,7 @@ class SupplierGoods {
                 'min_order' => (int)$data['min_order'],
                 'is_available_for_credit' => (int)$data['is_available_for_credit'],
                 'is_available' => (int)$data['is_available'],
-                'last_update_code' => $lastUpdateCode,
-                'last_update_price' => $lastUpdateCode,      // initialize to code to satisfy NOT NULL
-                'last_update_available' => $lastUpdateCode    // initialize to code to satisfy NOT NULL
+                'last_update_code' => $lastUpdateCode
             ];
             $newId = $this->insertRelation($insertData);
             return ['action' => 'insert', 'id' => $newId];
@@ -130,7 +126,6 @@ class SupplierGoods {
             'discount_price = :discount_price',
             'min_order = :min_order',
             'is_available_for_credit = :is_available_for_credit',
-            'last_update_price = :code',
             'last_update_code = :code'
         ];
         $params = [
@@ -145,7 +140,6 @@ class SupplierGoods {
         ];
         if (array_key_exists('is_available', $data)) {
             $sets[] = 'is_available = :is_available';
-            $sets[] = 'last_update_available = :code';
             $params[':is_available'] = (int)$data['is_available'];
         }
 
@@ -159,7 +153,7 @@ class SupplierGoods {
 
     public function updateAvailability(int $supplierId, int $goodsId, int $isAvailable, int $lastUpdateCode): int {
         $sql = "UPDATE supplier_goods
-                SET is_available = :avail, last_update_available = :code
+                SET is_available = :avail, last_update_code = :code
                 WHERE supplier_id = :sid AND goods_id = :gid";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute([
