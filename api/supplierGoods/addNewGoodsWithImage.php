@@ -52,14 +52,22 @@ if (!isset($_POST['supplier_id'])) {
 }
 $supplierId = (int)$_POST['supplier_id'];
 
+// Ensure required supplier_goods fields are present for first insert
+$requiredSgFields = ['price','discount_start','discount_price','min_order','is_available_for_credit','is_available'];
+foreach ($requiredSgFields as $field) {
+    if (!isset($_POST[$field])) {
+        $response(400, ['success' => false, 'message' => "Missing field: $field"]);
+    }
+}
+
 // Optional supplier_goods fields with defaults
 $sg = [];
-$sg['price'] = isset($_POST['price']) ? (int)$_POST['price'] : 0;
-$sg['discount_start'] = isset($_POST['discount_start']) ? (int)$_POST['discount_start'] : 0;
-$sg['discount_price'] = isset($_POST['discount_price']) ? (int)$_POST['discount_price'] : 0;
-$sg['min_order'] = isset($_POST['min_order']) ? (int)$_POST['min_order'] : 1;
-$sg['is_available_for_credit'] = isset($_POST['is_available_for_credit']) ? (int)$_POST['is_available_for_credit'] : 0;
-$sg['is_available'] = isset($_POST['is_available']) ? (int)$_POST['is_available'] : 1;
+$sg['price'] = (int)$_POST['price'];
+$sg['discount_start'] = (int)$_POST['discount_start'];
+$sg['discount_price'] = (int)$_POST['discount_price'];
+$sg['min_order'] = (int)$_POST['min_order'];
+$sg['is_available_for_credit'] = (int)$_POST['is_available_for_credit'];
+$sg['is_available'] = (int)$_POST['is_available'];
 
 // Prepare image destination
 $rand = random_int(100000, 999999);

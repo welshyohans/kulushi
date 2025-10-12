@@ -22,7 +22,8 @@ if (!is_array($data)) {
 }
 
 // Required fields
-foreach (['supplier_id','goods_id','price'] as $k) {
+$requiredFields = ['supplier_id','goods_id','price','discount_start','discount_price','min_order','is_available_for_credit'];
+foreach ($requiredFields as $k) {
     if (!array_key_exists($k, $data)) {
         $response(400, ['success' => false, 'message' => "Missing field: $k"]);
     }
@@ -30,7 +31,16 @@ foreach (['supplier_id','goods_id','price'] as $k) {
 
 $supplierId = (int)$data['supplier_id'];
 $goodsId = (int)$data['goods_id'];
-$price = (int)$data['price'];
+$payload = [
+    'price' => (int)$data['price'],
+    'discount_start' => (int)$data['discount_start'],
+    'discount_price' => (int)$data['discount_price'],
+    'min_order' => (int)$data['min_order'],
+    'is_available_for_credit' => (int)$data['is_available_for_credit']
+];
+if (array_key_exists('is_available', $data)) {
+    $payload['is_available'] = (int)$data['is_available'];
+}
 
 try {
     $database = new Database();
@@ -58,7 +68,7 @@ try {
     // Increment settings.last_update_code and use the new value for last_update_price only
     $code = $settings->nextCode();
 
-    $affected = $sgModel->updatePrice($supplierId, $goodsId, $price, (int)$code);
+    $affected = $sgModel->updatePrice($supplierId, $goodsId, $payload, (int)$code);
 
     $db->commit();
 
@@ -68,7 +78,12 @@ try {
         'supplier_id' => $supplierId,
         'goods_id' => $goodsId,
         'affected' => $affected,
-        'last_update_price' => (int)$code
+        'discount_start' => $payload['discount_start'],
+        'discount_price' => $payload['discount_price'],
+        'min_order' => $payload['min_order'],
+        'is_available_for_credit' => $payload['is_available_for_credit'],
+        'last_update_price' => (int)$code,
+        'last_update_code' => (int)$code
     ]);
 } catch (PDOException $e) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {

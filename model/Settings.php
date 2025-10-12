@@ -6,6 +6,16 @@ class Settings {
         $this->conn = $conn;
     }
 
+    public function getValue(string $key, $default = null){
+        $stmt = $this->conn->prepare("SELECT value FROM settings WHERE setting_key = :key LIMIT 1");
+        $stmt->execute([':key' => $key]);
+        $value = $stmt->fetchColumn();
+        if ($value === false) {
+            return $default;
+        }
+        return $value;
+    }
+
     // Returns the incremented last_update_code (creates it with 1 if missing)
     public function nextCode(){
         $manageTx = !$this->conn->inTransaction();

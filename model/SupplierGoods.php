@@ -92,15 +92,21 @@ class SupplierGoods {
             );
             return ['action' => 'update', 'affected' => $affected, 'id' => (int)$existing['id']];
         } else {
+            $requiredForInsert = ['price','discount_start','discount_price','min_order','is_available_for_credit','is_available'];
+            foreach ($requiredForInsert as $field) {
+                if (!array_key_exists($field, $data)) {
+                    throw new InvalidArgumentException("Missing field for insert: $field");
+                }
+            }
             $insertData = [
                 'supplier_id' => (int)$data['supplier_id'],
                 'goods_id' => (int)$data['goods_id'],
-                'price' => isset($data['price']) ? (int)$data['price'] : 0,
-                'discount_start' => isset($data['discount_start']) ? (int)$data['discount_start'] : 0,
-                'discount_price' => isset($data['discount_price']) ? (int)$data['discount_price'] : 0,
-                'min_order' => isset($data['min_order']) ? (int)$data['min_order'] : 1,
-                'is_available_for_credit' => isset($data['is_available_for_credit']) ? (int)$data['is_available_for_credit'] : 0,
-                'is_available' => isset($data['is_available']) ? (int)$data['is_available'] : 1,
+                'price' => (int)$data['price'],
+                'discount_start' => (int)$data['discount_start'],
+                'discount_price' => (int)$data['discount_price'],
+                'min_order' => (int)$data['min_order'],
+                'is_available_for_credit' => (int)$data['is_available_for_credit'],
+                'is_available' => (int)$data['is_available'],
                 'last_update_code' => $lastUpdateCode,
                 'last_update_price' => $lastUpdateCode,      // initialize to code to satisfy NOT NULL
                 'last_update_available' => $lastUpdateCode    // initialize to code to satisfy NOT NULL
@@ -110,17 +116,44 @@ class SupplierGoods {
         }
     }
 
-    public function updatePrice(int $supplierId, int $goodsId, int $price, int $lastUpdateCode): int {
-        $sql = "UPDATE supplier_goods
-                SET price = :price, last_update_price = :code
-                WHERE supplier_id = :sid AND goods_id = :gid";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([
-            ':price' => $price,
+    public function updatePrice(int $supplierId, int $goodsId, array $data, int $lastUpdateCode): int {
+        $required = ['price','discount_start','discount_price','min_order','is_available_for_credit'];
+        foreach ($required as $field) {
+            if (!array_key_exists($field, $data)) {
+                throw new InvalidArgumentException("Missing field for update: $field");
+            }
+        }
+
+        $sets = [
+            'price = :price',
+            'discount_start = :discount_start',
+            'discount_price = :discount_price',
+            'min_order = :min_order',
+            'is_available_for_credit = :is_available_for_credit',
+            'last_update_price = :code',
+            'last_update_code = :code'
+        ];
+        $params = [
+            ':price' => (int)$data['price'],
+            ':discount_start' => (int)$data['discount_start'],
+            ':discount_price' => (int)$data['discount_price'],
+            ':min_order' => (int)$data['min_order'],
+            ':is_available_for_credit' => (int)$data['is_available_for_credit'],
             ':code' => $lastUpdateCode,
             ':sid' => $supplierId,
             ':gid' => $goodsId
-        ]);
+        ];
+        if (array_key_exists('is_available', $data)) {
+            $sets[] = 'is_available = :is_available';
+            $sets[] = 'last_update_available = :code';
+            $params[':is_available'] = (int)$data['is_available'];
+        }
+
+        $sql = "UPDATE supplier_goods
+                SET " . implode(', ', $sets) . "
+                WHERE supplier_id = :sid AND goods_id = :gid";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->rowCount();
     }
 

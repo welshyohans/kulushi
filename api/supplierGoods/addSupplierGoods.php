@@ -32,13 +32,20 @@ $supplierId = (int)$data['supplier_id'];
 $goodsId = (int)$data['goods_id'];
 
 // Optional fields with defaults
-$payload = [];
-$payload['price'] = isset($data['price']) ? (int)$data['price'] : 0;
-$payload['discount_start'] = isset($data['discount_start']) ? (int)$data['discount_start'] : 0;
-$payload['discount_price'] = isset($data['discount_price']) ? (int)$data['discount_price'] : 0;
-$payload['min_order'] = isset($data['min_order']) ? (int)$data['min_order'] : 1;
-$payload['is_available_for_credit'] = isset($data['is_available_for_credit']) ? (int)$data['is_available_for_credit'] : 0;
-$payload['is_available'] = isset($data['is_available']) ? (int)$data['is_available'] : 1;
+$requiredFields = ['price','discount_start','discount_price','min_order','is_available_for_credit','is_available'];
+foreach ($requiredFields as $rf) {
+    if (!array_key_exists($rf, $data)) {
+        $response(400, ['success' => false, 'message' => "Missing field: $rf"]);
+    }
+}
+$payload = [
+    'price' => (int)$data['price'],
+    'discount_start' => (int)$data['discount_start'],
+    'discount_price' => (int)$data['discount_price'],
+    'min_order' => (int)$data['min_order'],
+    'is_available_for_credit' => (int)$data['is_available_for_credit'],
+    'is_available' => (int)$data['is_available']
+];
 
 try {
     $database = new Database();

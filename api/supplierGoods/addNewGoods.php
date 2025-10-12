@@ -37,17 +37,25 @@ if (!array_key_exists('supplier_id', $data)) {
 }
 $supplierId = (int)$data['supplier_id'];
 
+// Required supplier_goods attributes for initial linkage
+$requiredRelationFields = ['price','discount_start','discount_price','min_order','is_available_for_credit','is_available'];
+foreach ($requiredRelationFields as $field) {
+    if (!array_key_exists($field, $data)) {
+        $response(400, ['success' => false, 'message' => "Missing field: $field"]);
+    }
+}
+
 // Optional goods field; default to empty string if omitted
 $imageUrl = isset($data['image_url']) ? (string)$data['image_url'] : '';
 
 // Optional supplier_goods fields
 $sgInput = [];
-$sgInput['price'] = isset($data['price']) ? (int)$data['price'] : 0;
-$sgInput['discount_start'] = isset($data['discount_start']) ? (int)$data['discount_start'] : 0;
-$sgInput['discount_price'] = isset($data['discount_price']) ? (int)$data['discount_price'] : 0;
-$sgInput['min_order'] = isset($data['min_order']) ? (int)$data['min_order'] : 1;
-$sgInput['is_available_for_credit'] = isset($data['is_available_for_credit']) ? (int)$data['is_available_for_credit'] : 0;
-$sgInput['is_available'] = isset($data['is_available']) ? (int)$data['is_available'] : 1;
+$sgInput['price'] = (int)$data['price'];
+$sgInput['discount_start'] = (int)$data['discount_start'];
+$sgInput['discount_price'] = (int)$data['discount_price'];
+$sgInput['min_order'] = (int)$data['min_order'];
+$sgInput['is_available_for_credit'] = (int)$data['is_available_for_credit'];
+$sgInput['is_available'] = (int)$data['is_available'];
 
 try {
     $database = new Database();
