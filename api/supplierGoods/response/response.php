@@ -212,10 +212,10 @@ try {
         'suppliersList' => $suppliersList,
         'supplierGoodsList' => $supplierGoodsList,
         // Legacy keys kept alongside new Android-aligned keys
-        'listOfCategory' => $categoriesList,
-        'listOfGoods' => $goodsList,
-        'listOfSuppliers' => $suppliersList,
-        'listOfSupplierGoods' => $supplierGoodsList
+        //'listOfCategory' => $categoriesList,
+        //'listOfGoods' => $goodsList,
+        //'listOfSuppliers' => $suppliersList,
+        //'listOfSupplierGoods' => $supplierGoodsList
     ];
 
     $response(200, $payload);
