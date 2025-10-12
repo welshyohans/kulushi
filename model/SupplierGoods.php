@@ -88,6 +88,7 @@ class SupplierGoods {
                 $data,
                 $lastUpdateCode
             );
+            $this->touchSupplierLastUpdate((int)$data['supplier_id'], $lastUpdateCode);
             return ['action' => 'update', 'affected' => $affected, 'id' => (int)$existing['id']];
         } else {
             $requiredForInsert = ['price','discount_start','discount_price','min_order','is_available_for_credit','is_available'];
@@ -108,6 +109,7 @@ class SupplierGoods {
                 'last_update_code' => $lastUpdateCode
             ];
             $newId = $this->insertRelation($insertData);
+            $this->touchSupplierLastUpdate((int)$data['supplier_id'], $lastUpdateCode);
             return ['action' => 'insert', 'id' => $newId];
         }
     }
@@ -148,6 +150,7 @@ class SupplierGoods {
                 WHERE supplier_id = :sid AND goods_id = :gid";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
+        $this->touchSupplierLastUpdate($supplierId, $lastUpdateCode);
         return $stmt->rowCount();
     }
 
@@ -162,7 +165,16 @@ class SupplierGoods {
             ':sid' => $supplierId,
             ':gid' => $goodsId
         ]);
+        $this->touchSupplierLastUpdate($supplierId, $lastUpdateCode);
         return $stmt->rowCount();
+    }
+
+    private function touchSupplierLastUpdate(int $supplierId, int $lastUpdateCode): void {
+        $stmt = $this->conn->prepare("UPDATE supplier SET last_update_code = :code WHERE shop_id = :sid");
+        $stmt->execute([
+            ':code' => $lastUpdateCode,
+            ':sid' => $supplierId
+        ]);
     }
 }
 

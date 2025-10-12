@@ -3,12 +3,12 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Oct 11, 2025 at 06:03 AM
+-- Generation Time: Oct 12, 2025 at 04:10 PM
 -- Server version: 10.11.14-MariaDB-cll-lve
 -- PHP Version: 8.4.11
 
-SET FOREIGN_KEY_CHECKS=0;
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
 SET time_zone = "+00:00";
 
 
@@ -131,12 +131,13 @@ CREATE TABLE `customer` (
   `location` varchar(100) NOT NULL,
   `location_description` text NOT NULL,
   `register_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `user_type` int(11) NOT NULL DEFAULT 0,
+  `user_type` varchar(50) NOT NULL DEFAULT '0',
   `firebase_code` text NOT NULL DEFAULT '0',
   `fast_delivery_value` int(11) NOT NULL DEFAULT -1,
   `use_telegram` int(11) NOT NULL DEFAULT 0,
   `total_credit` int(11) NOT NULL DEFAULT 0,
-  `total_unpaid` int(11) NOT NULL DEFAULT 0
+  `total_unpaid` int(11) NOT NULL DEFAULT 0,
+  `permitted_credit` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -266,7 +267,8 @@ CREATE TABLE `payments` (
   `paid_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `amount` int(11) NOT NULL,
   `through` varchar(50) NOT NULL,
-  `additional_info` varchar(200) NOT NULL
+  `additional_info` varchar(200) NOT NULL,
+  `credit_left_after_payment` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 
 -- --------------------------------------------------------
@@ -312,8 +314,8 @@ CREATE TABLE `supplier` (
   `password` varchar(20) NOT NULL,
   `image` varchar(100) NOT NULL,
   `isVisible` int(11) NOT NULL,
-  `last_update_code` int(11) NOT NULL,
-  `last_update` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'this is the last date the shop owner update... to show them to retailers'
+  `last_update` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'this is the last date the shop owner update... to show them to retailers',
+  `last_update_code` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -682,7 +684,7 @@ ALTER TABLE `ordered_list`
 ALTER TABLE `purchase_goods`
   ADD CONSTRAINT `purchase_goods_ibfk_1` FOREIGN KEY (`goods_id`) REFERENCES `goods` (`id`),
   ADD CONSTRAINT `purchase_goods_ibfk_2` FOREIGN KEY (`admins_id`) REFERENCES `admins` (`id`);
-SET FOREIGN_KEY_CHECKS=1;
+COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

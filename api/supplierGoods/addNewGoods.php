@@ -101,6 +101,9 @@ try {
     ];
     $goodsId = $goodsModel->createGoods($goodsPayload);
 
+    $touchCategory = $db->prepare('UPDATE category SET last_update_code = :code WHERE id = :id');
+    $touchCategory->execute([':code' => (int)$code, ':id' => (int)$goodsInput['category_id']]);
+
     $relationResult = $sgModel->upsertRelation([
         'supplier_id' => $supplierId,
         'goods_id' => $goodsId,

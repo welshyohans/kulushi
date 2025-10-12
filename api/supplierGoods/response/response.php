@@ -33,6 +33,69 @@ function normalizeRow(array $row): array {
     return $row;
 }
 
+function mapCategoryRow(array $row): array {
+    return [
+        'categoryId' => (int)($row['id'] ?? 0),
+        'name' => (string)($row['name'] ?? ''),
+        'imageUrl' => (string)($row['image_url'] ?? ''),
+        'isAvailable' => (int)($row['is_available'] ?? 0),
+        'lastUpdateCode' => (int)($row['last_update_code'] ?? 0),
+        'priority' => (int)($row['priority'] ?? 0),
+    ];
+}
+
+function mapGoodsRow(array $row): array {
+    return [
+        'goodsId' => (int)($row['id'] ?? 0),
+        'categoryId' => (int)($row['category_id'] ?? 0),
+        'brandId' => (int)($row['brand_id'] ?? 0),
+        'name' => (string)($row['name'] ?? ''),
+        'description' => (string)($row['description'] ?? ''),
+        'priority' => (int)($row['priority'] ?? 0),
+        'showInHome' => (int)($row['show_in_home'] ?? 0),
+        'imageUrl' => (string)($row['image_url'] ?? ''),
+        'lastUpdateCode' => (int)($row['last_update_code'] ?? 0),
+        'lastUpdate' => (string)($row['last_update'] ?? ''),
+        'starValue' => (int)($row['star_value'] ?? 0),
+        'tiktokUrl' => (string)($row['tiktok_url'] ?? ''),
+        'commission' => (int)($row['commission'] ?? 0),
+    ];
+}
+
+function mapSupplierRow(array $row): array {
+    return [
+        'shopId' => (int)($row['shop_id'] ?? 0),
+        'shopName' => (string)($row['shop_name'] ?? ''),
+        'shopDetail' => (string)($row['shop_detail'] ?? ''),
+        'shopType' => (string)($row['shop_type'] ?? ''),
+        'phone' => (int)($row['phone'] ?? 0),
+        'priority' => (int)($row['priority'] ?? 0),
+        'password' => (int)($row['password'] ?? 0),
+        'image' => (string)($row['image'] ?? ''),
+        'isVisible' => (int)($row['isVisible'] ?? 0),
+        'lastUpdate' => (string)($row['last_update'] ?? ''),
+        'lastUpdateCode' => (int)($row['last_update_code'] ?? 0),
+    ];
+}
+
+function mapSupplierGoodsRow(array $row): array {
+    $lastUpdateCode = (int)($row['last_update_code'] ?? 0);
+    return [
+        'id' => (int)($row['id'] ?? 0),
+        'supplierId' => (int)($row['supplier_id'] ?? 0),
+        'goodsId' => (int)($row['goods_id'] ?? 0),
+        'price' => (float)($row['price'] ?? 0),
+        'discountStart' => (int)($row['discount_start'] ?? 0),
+        'discountPrice' => (float)($row['discount_price'] ?? 0),
+        'minOrder' => (int)($row['min_order'] ?? 0),
+        'isAvailableForCredit' => (int)($row['is_available_for_credit'] ?? 0),
+        'isAvailable' => (int)($row['is_available'] ?? 0),
+        'lastUpdateCode' => $lastUpdateCode,
+        'lastUpdatePrice' => (int)($row['last_update_price'] ?? $lastUpdateCode),
+        'lastUpdateAvailable' => (int)($row['last_update_available'] ?? $lastUpdateCode),
+    ];
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $response(405, ['success' => false, 'message' => 'Method not allowed']);
 }
@@ -73,39 +136,86 @@ try {
         $customer['firebase_code'] = $fcmCode;
     }
 
-    $addressParts = [];
+    $cityParts = [];
     if (!empty($customer['city'])) {
-        $addressParts[] = $customer['city'];
+        $cityParts[] = $customer['city'];
     }
     if (!empty($customer['sub_city'])) {
-        $addressParts[] = $customer['sub_city'];
+        $cityParts[] = $customer['sub_city'];
     }
-    $addressName = implode(', ', $addressParts);
+    $addressName = implode(', ', $cityParts);
+
+    $addressParts = [];
+    if (!empty($customer['specific_address'])) {
+        $addressParts[] = $customer['specific_address'];
+    }
+    if ($addressName !== '') {
+        $addressParts[] = $addressName;
+    }
+    $address = implode(', ', $addressParts);
+    if ($address === '') {
+        $address = $addressName;
+    }
 
     $currentLastCode = (int)$settingsModel->getValue('last_update_code', 0);
+    $expireTime = (int)$settingsModel->getValue('expire_time', 0);
+    $permittedCredit = array_key_exists('permitted_credit', $customer) ? (int)$customer['permitted_credit'] : 0;
 
     $settingsSnapshot = [
         'customerId' => $customerId,
-        'customerName' => $customer['name'],
-        'phoneNumber' => $customer['phone'],
-        'customerShopName' => $customer['shop_name'],
-        'addressName' => $addressName,
+        'shopName' => (string)$customer['shop_name'],
+        'userName' => (string)$customer['name'],
+        'phoneNumber' => (string)$customer['phone'],
+        'address' => $address,
         'totalCredit' => (int)$customer['total_credit'],
-        'expireTime' => (int)$settingsModel->getValue('expire_time', 0),
-        'lastUpdateCode' => $currentLastCode,
+        'expireTime' => $expireTime,
+        'permittedCredit' => $permittedCredit,
+        'userType' => (string)($customer['user_type'] ?? ''),
+        'lastUpdateCode' => (string)$currentLastCode,
+        'fcmCode' => (string)($customer['firebase_code'] ?? ''),
+        // Legacy keys kept for backward compatibility
+        'customerName' => (string)$customer['name'],
+        'customerShopName' => (string)$customer['shop_name'],
+        'addressName' => $addressName,
         'requestedLastUpdateCode' => $requestedCode
     ];
 
     $params = [':code' => $requestedCode];
 
+    $categoriesList = array_map('mapCategoryRow', fetchRows(
+        $db,
+        'SELECT * FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC',
+        $params
+    ));
+    $goodsList = array_map('mapGoodsRow', fetchRows(
+        $db,
+        'SELECT * FROM goods WHERE last_update_code > :code ORDER BY last_update_code ASC',
+        $params
+    ));
+    $suppliersList = array_map('mapSupplierRow', fetchRows(
+        $db,
+        'SELECT * FROM supplier WHERE last_update_code > :code ORDER BY last_update_code ASC',
+        $params
+    ));
+    $supplierGoodsList = array_map('mapSupplierGoodsRow', fetchRows(
+        $db,
+        'SELECT * FROM supplier_goods WHERE last_update_code > :code ORDER BY last_update_code ASC',
+        $params
+    ));
+
     $payload = [
         'success' => true,
-        'message' => 'Data sync payload',
+        'message' => 'Data sync payload success',
         'settings' => $settingsSnapshot,
-        'listOfCategory' => fetchRows($db, 'SELECT * FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC', $params),
-        'listOfGoods' => fetchRows($db, 'SELECT * FROM goods WHERE last_update_code > :code ORDER BY last_update_code ASC', $params),
-        'listOfSuppliers' => fetchRows($db, 'SELECT * FROM supplier WHERE last_update_code > :code ORDER BY last_update_code ASC', $params),
-        'listOfSupplierGoods' => fetchRows($db, 'SELECT * FROM supplier_goods WHERE last_update_code > :code ORDER BY last_update_code ASC', $params)
+        'categoriesList' => $categoriesList,
+        'goodsList' => $goodsList,
+        'suppliersList' => $suppliersList,
+        'supplierGoodsList' => $supplierGoodsList,
+        // Legacy keys kept alongside new Android-aligned keys
+        'listOfCategory' => $categoriesList,
+        'listOfGoods' => $goodsList,
+        'listOfSuppliers' => $suppliersList,
+        'listOfSupplierGoods' => $supplierGoodsList
     ];
 
     $response(200, $payload);

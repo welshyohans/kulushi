@@ -140,6 +140,9 @@ try {
     ];
     $goodsId = $goodsModel->createGoods($goodsInsert);
 
+    $touchCategory = $db->prepare('UPDATE category SET last_update_code = :code WHERE id = :id');
+    $touchCategory->execute([':code' => (int)$code, ':id' => (int)$goods['category_id']]);
+
     // Upsert supplier_goods relation with same last_update_code
     $upsertRes = $sgModel->upsertRelation([
         'supplier_id' => $supplierId,
