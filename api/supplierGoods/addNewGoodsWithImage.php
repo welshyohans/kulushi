@@ -64,18 +64,14 @@ $sg['is_available'] = isset($_POST['is_available']) ? (int)$_POST['is_available'
 // Prepare image destination
 $rand = random_int(100000, 999999);
 $filename = 'goods_' . time() . '_' . $rand . '.' . $ext;
-$imagesDirFs = realpath(__DIR__ . '/../../') . DIRECTORY_SEPARATOR . 'images';
-if ($imagesDirFs === false) {
-    // fallback: try to create images directory relative to project root
-    $base = realpath(__DIR__ . '/../../');
-    if ($base === false) {
-        $response(500, ['success' => false, 'message' => 'Base directory resolution failed']);
-    }
-    $imagesDirFs = $base . DIRECTORY_SEPARATOR . 'images';
-    if (!is_dir($imagesDirFs)) {
-        if (!mkdir($imagesDirFs, 0775, true)) {
-            $response(500, ['success' => false, 'message' => 'Failed to create images directory']);
-        }
+$baseDir = realpath(__DIR__ . '/../../');
+if ($baseDir === false) {
+    $response(500, ['success' => false, 'message' => 'Base directory resolution failed']);
+}
+$imagesDirFs = $baseDir . DIRECTORY_SEPARATOR . 'images';
+if (!is_dir($imagesDirFs)) {
+    if (!mkdir($imagesDirFs, 0775, true) && !is_dir($imagesDirFs)) {
+        $response(500, ['success' => false, 'message' => 'Failed to create images directory']);
     }
 }
 $destPath = $imagesDirFs . DIRECTORY_SEPARATOR . $filename;
