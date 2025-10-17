@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 
 include_once '../../config/Database.php';
 include_once '../../model/SupplierGoods.php';
+include_once '../../model/Settings.php';
 
 $response = function (int $code, array $data): void {
     http_response_code($code);
@@ -39,6 +40,7 @@ try {
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     $sgModel = new SupplierGoods($db);
+    $settings = new Settings($db);
     if (!$sgModel->supplierExists($supplierId)) {
         $response(404, ['success' => false, 'message' => 'Supplier not found', 'supplier_id' => $supplierId]);
     }
@@ -51,10 +53,13 @@ try {
     $supplierGoodsStmt->execute([':sid' => $supplierId]);
     $supplierGoods = $supplierGoodsStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $currentCode = (int)$settings->getValue('last_update_code', 0);
+
     $response(200, [
         'success' => true,
         'supplier_id' => $supplierId,
         'requested_last_update_code' => $lastUpdateCode,
+        'current_last_update_code' => $currentCode,
         'goods_updates' => $goods,
         'supplier_goods' => $supplierGoods
     ]);
