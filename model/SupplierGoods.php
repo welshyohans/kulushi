@@ -26,6 +26,13 @@ class SupplierGoods {
         return $row ?: null;
     }
 
+    public function findById(int $id): ?array {
+        $stmt = $this->conn->prepare("SELECT * FROM supplier_goods WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     // Insert new supplier_goods record (all NOT NULL fields must be provided)
     public function insertRelation(array $data): int {
         $required = [
@@ -166,6 +173,65 @@ class SupplierGoods {
             ':gid' => $goodsId
         ]);
         $this->touchSupplierLastUpdate($supplierId, $lastUpdateCode);
+        return $stmt->rowCount();
+    }
+
+    public function insertSimpleRelation(int $supplierId, int $goodsId, int $price, int $lastUpdateCode): int {
+        $data = [
+            'supplier_id' => $supplierId,
+            'goods_id' => $goodsId,
+            'price' => $price,
+            'discount_start' => 0,
+            'discount_price' => $price,
+            'min_order' => 1,
+            'is_available_for_credit' => 0,
+            'is_available' => 1,
+            'last_update_code' => $lastUpdateCode
+        ];
+        $newId = $this->insertRelation($data);
+        $this->touchSupplierLastUpdate($supplierId, $lastUpdateCode);
+        return $newId;
+    }
+
+    public function updateById(int $id, array $data, int $lastUpdateCode): int {
+        $existing = $this->findById($id);
+        if (!$existing) {
+            return 0;
+        }
+
+        $allowed = ['price','discount_start','discount_price','min_order','is_available_for_credit','is_available'];
+        $sets = [];
+        $params = [':id' => $id, ':last_update_code' => $lastUpdateCode];
+        foreach ($allowed as $key) {
+            if (array_key_exists($key, $data)) {
+                $sets[] = "$key = :$key";
+                $params[":$key"] = (int)$data[$key];
+            }
+        }
+        $sets[] = "last_update_code = :last_update_code";
+
+        $sql = "UPDATE supplier_goods SET " . implode(', ', $sets) . " WHERE id = :id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+
+        $this->touchSupplierLastUpdate((int)$existing['supplier_id'], $lastUpdateCode);
+        return $stmt->rowCount();
+    }
+
+    public function updateAvailabilityById(int $id, int $isAvailable, int $lastUpdateCode): int {
+        $existing = $this->findById($id);
+        if (!$existing) {
+            return 0;
+        }
+
+        $stmt = $this->conn->prepare("UPDATE supplier_goods SET is_available = :avail, last_update_code = :code WHERE id = :id");
+        $stmt->execute([
+            ':avail' => $isAvailable,
+            ':code' => $lastUpdateCode,
+            ':id' => $id
+        ]);
+
+        $this->touchSupplierLastUpdate((int)$existing['supplier_id'], $lastUpdateCode);
         return $stmt->rowCount();
     }
 
