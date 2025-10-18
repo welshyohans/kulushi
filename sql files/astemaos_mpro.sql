@@ -30,7 +30,8 @@ SET time_zone = "+00:00";
 CREATE TABLE `address` (
   `id` int(11) NOT NULL,
   `city` varchar(40) NOT NULL,
-  `sub_city` varchar(40) NOT NULL
+  `sub_city` varchar(40) NOT NULL,
+  `last_update_code` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -138,6 +139,22 @@ CREATE TABLE `customer` (
   `total_credit` int(11) NOT NULL DEFAULT 0,
   `total_unpaid` int(11) NOT NULL DEFAULT 0,
   `permitted_credit` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_address`
+--
+
+CREATE TABLE `customer_address` (
+  `id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `address_id` int(11) NOT NULL,
+  `address_name` varchar(150) DEFAULT NULL,
+  `is_main_address` tinyint(1) NOT NULL DEFAULT 0,
+  `priority` int(11) NOT NULL DEFAULT 0,
+  `last_update_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -309,6 +326,7 @@ CREATE TABLE `supplier` (
   `shop_name` varchar(50) NOT NULL,
   `shop_detail` varchar(150) NOT NULL,
   `shop_type` varchar(50) NOT NULL,
+  `address_id` int(11) DEFAULT NULL,
   `phone` varchar(20) NOT NULL,
   `priority` int(11) NOT NULL,
   `password` varchar(20) NOT NULL,
@@ -420,6 +438,14 @@ ALTER TABLE `customer`
   ADD KEY `address_id` (`address_id`);
 
 --
+-- Indexes for table `customer_address`
+--
+ALTER TABLE `customer_address`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `customer_id` (`customer_id`),
+  ADD KEY `address_id` (`address_id`);
+
+--
 -- Indexes for table `deliver_time`
 --
 ALTER TABLE `deliver_time`
@@ -492,7 +518,8 @@ ALTER TABLE `settings`
 -- Indexes for table `supplier`
 --
 ALTER TABLE `supplier`
-  ADD PRIMARY KEY (`shop_id`);
+  ADD PRIMARY KEY (`shop_id`),
+  ADD KEY `address_id` (`address_id`);
 
 --
 -- Indexes for table `supplier_goods`
@@ -556,6 +583,12 @@ ALTER TABLE `credit`
 -- AUTO_INCREMENT for table `customer`
 --
 ALTER TABLE `customer`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `customer_address`
+--
+ALTER TABLE `customer_address`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -654,10 +687,23 @@ ALTER TABLE `customer`
   ADD CONSTRAINT `customer_ibfk_2` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
 
 --
+-- Constraints for table `customer_address`
+--
+ALTER TABLE `customer_address`
+  ADD CONSTRAINT `customer_address_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`),
+  ADD CONSTRAINT `customer_address_ibfk_2` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
+
+--
 -- Constraints for table `deliver_time`
 --
 ALTER TABLE `deliver_time`
   ADD CONSTRAINT `deliver_time_ibfk_1` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
+
+--
+-- Constraints for table `supplier`
+--
+ALTER TABLE `supplier`
+  ADD CONSTRAINT `supplier_ibfk_1` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
 
 --
 -- Constraints for table `goods`

@@ -45,7 +45,10 @@ foreach ($payloads as $index => $item) {
     $supplier = $item['supplierId'] ?? $item['supplier_id'] ?? null;
     $goods = $item['goodsId'] ?? $item['goods_id'] ?? null;
     $price = $item['price'] ?? null;
-    $isUpdateRaw = $item['is_update'] ?? $item['isUpdate'] ?? false;
+    $minOrderValue = $item['min_order'] ?? $item['minOrder'] ?? null;
+    $discountPriceValue = $item['discount_price'] ?? $item['discountPrice'] ?? null;
+    $discountStartValue = $item['discount_start'] ?? $item['discountStart'] ?? null;
+    $isUpdateRaw = $item['is_update'] ?? $item['isUpdate'] ?? null;
 
     if ($supplier === null) {
         $response(400, ['success' => false, 'message' => "Missing supplierId at index {$index}"]);
@@ -56,13 +59,46 @@ foreach ($payloads as $index => $item) {
     if ($price === null) {
         $response(400, ['success' => false, 'message' => "Missing price at index {$index}"]);
     }
+    if ($minOrderValue === null) {
+        $response(400, ['success' => false, 'message' => "Missing minOrder at index {$index}"]);
+    }
+    if ($discountPriceValue === null) {
+        $response(400, ['success' => false, 'message' => "Missing discountPrice at index {$index}"]);
+    }
+    if ($discountStartValue === null) {
+        $response(400, ['success' => false, 'message' => "Missing discountStart at index {$index}"]);
+    }
+    if ($isUpdateRaw === null) {
+        $response(400, ['success' => false, 'message' => "Missing isUpdate flag at index {$index}"]);
+    }
+
+    if (is_bool($isUpdateRaw)) {
+        $isUpdate = $isUpdateRaw;
+    } else {
+        $filtered = filter_var($isUpdateRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($filtered === null) {
+            $response(400, ['success' => false, 'message' => "Invalid isUpdate flag at index {$index}"]);
+        }
+        $isUpdate = $filtered;
+    }
+
+    $discountStart = $discountStartValue;
+    $discountPrice = $discountPriceValue;
+    $minOrder = $minOrderValue;
+    $isAvailableForCredit = $item['is_available_for_credit'] ?? null;
+    $isAvailable = $item['is_available'] ?? null;
 
     $operations[] = [
         'index' => $index,
         'supplier_id' => (int)$supplier,
         'goods_id' => (int)$goods,
         'price' => (int)$price,
-        'is_update' => filter_var($isUpdateRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool)$isUpdateRaw
+        'is_update' => $isUpdate,
+        'discount_start' => (int)$discountStart,
+        'discount_price' => (int)$discountPrice,
+        'min_order' => (int)$minOrder,
+        'is_available_for_credit' => $isAvailableForCredit !== null ? (int)$isAvailableForCredit : null,
+        'is_available' => $isAvailable !== null ? (int)$isAvailable : null
     ];
 }
 
@@ -123,10 +159,27 @@ try {
                 ]);
             }
 
+            $updateFields = [
+                'price' => $op['price'],
+                'discount_price' => $op['discount_price'] !== null ? $op['discount_price'] : $op['price']
+            ];
+            if ($op['discount_start'] !== null) {
+                $updateFields['discount_start'] = $op['discount_start'];
+            }
+            if ($op['min_order'] !== null) {
+                $updateFields['min_order'] = $op['min_order'];
+            }
+            if ($op['is_available_for_credit'] !== null) {
+                $updateFields['is_available_for_credit'] = $op['is_available_for_credit'];
+            }
+            if ($op['is_available'] !== null) {
+                $updateFields['is_available'] = $op['is_available'];
+            }
+
             $affected = $sgModel->updateCoreFields(
                 $op['supplier_id'],
                 $op['goods_id'],
-                ['price' => $op['price'], 'discount_price' => $op['price']],
+                $updateFields,
                 (int)$code
             );
 
@@ -153,7 +206,14 @@ try {
                 $op['supplier_id'],
                 $op['goods_id'],
                 $op['price'],
-                (int)$code
+                (int)$code,
+                [
+                    'discount_start' => $op['discount_start'],
+                    'discount_price' => $op['discount_price'] ?? $op['price'],
+                    'min_order' => $op['min_order'],
+                    'is_available_for_credit' => $op['is_available_for_credit'],
+                    'is_available' => $op['is_available']
+                ]
             );
 
             $results[] = [

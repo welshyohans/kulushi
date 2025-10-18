@@ -33,6 +33,15 @@ function normalizeRow(array $row): array {
     return $row;
 }
 
+function mapAddressRow(array $row): array {
+    return [
+        'addressId' => (int)($row['id'] ?? 0),
+        'city' => (string)($row['city'] ?? ''),
+        'subCity' => (string)($row['sub_city'] ?? ''),
+        'lastUpdateCode' => (int)($row['last_update_code'] ?? 0),
+    ];
+}
+
 function mapCategoryRow(array $row): array {
     return [
         'categoryId' => (int)($row['id'] ?? 0),
@@ -62,12 +71,25 @@ function mapGoodsRow(array $row): array {
     ];
 }
 
+function mapCustomerAddressRow(array $row): array {
+    return [
+        'customerAddressId' => (int)($row['id'] ?? 0),
+        'customerId' => (int)($row['customer_id'] ?? 0),
+        'addressId' => (int)($row['address_id'] ?? 0),
+        'addressName' => (string)($row['address_name'] ?? ''),
+        'isMainAddress' => (int)($row['is_main_address'] ?? 0),
+        'priority' => (int)($row['priority'] ?? 0),
+        'lastUpdateTime' => (string)($row['last_update_time'] ?? ''),
+    ];
+}
+
 function mapSupplierRow(array $row): array {
     return [
         'shopId' => (int)($row['shop_id'] ?? 0),
         'shopName' => (string)($row['shop_name'] ?? ''),
         'shopDetail' => (string)($row['shop_detail'] ?? ''),
         'shopType' => (string)($row['shop_type'] ?? ''),
+        'addressId' => (int)($row['address_id'] ?? 0),
         'phone' => (int)($row['phone'] ?? 0),
         'priority' => (int)($row['priority'] ?? 0),
         'password' => (int)($row['password'] ?? 0),
@@ -182,6 +204,63 @@ try {
 
     $params = [':code' => $requestedCode];
 
+    $addressList = array_map('mapAddressRow', fetchRows(
+        $db,
+        'SELECT * FROM address WHERE last_update_code > :code ORDER BY last_update_code ASC',
+        $params
+    ));
+
+    $customerAddressRows = fetchRows(
+        $db,
+        'SELECT * FROM customer_address WHERE customer_id = :customer_id',
+        [':customer_id' => $customerId]
+    );
+    $customerAddressList = array_map('mapCustomerAddressRow', $customerAddressRows);
+
+    $allowedAddressIds = [];
+    foreach ($customerAddressRows as $row) {
+        $addrId = isset($row['address_id']) ? (int)$row['address_id'] : 0;
+        if ($addrId > 0) {
+            $allowedAddressIds[$addrId] = true;
+        }
+    }
+    $allowedAddressIds = array_values(array_map('intval', array_keys($allowedAddressIds)));
+
+    $supplierRows = [];
+    $allowedSupplierIds = [];
+
+    if (!empty($allowedAddressIds)) {
+        $addressPlaceholders = [];
+        $addressParams = [];
+        foreach ($allowedAddressIds as $idx => $addrId) {
+            $param = ":addr{$idx}";
+            $addressPlaceholders[] = $param;
+            $addressParams[$param] = $addrId;
+        }
+        $addressInClause = implode(',', $addressPlaceholders);
+
+        $supplierParams = array_merge([':code' => $requestedCode], $addressParams);
+        $supplierRows = fetchRows(
+            $db,
+            'SELECT * FROM supplier WHERE last_update_code > :code AND address_id IN (' . $addressInClause . ') ORDER BY last_update_code ASC',
+            $supplierParams
+        );
+
+        $supplierIdRows = fetchRows(
+            $db,
+            'SELECT shop_id FROM supplier WHERE address_id IN (' . $addressInClause . ')',
+            $addressParams
+        );
+        $supplierIdSet = [];
+        foreach ($supplierIdRows as $row) {
+            $supplierId = isset($row['shop_id']) ? (int)$row['shop_id'] : 0;
+            if ($supplierId > 0) {
+                $supplierIdSet[$supplierId] = true;
+            }
+        }
+        $allowedSupplierIds = array_values(array_map('intval', array_keys($supplierIdSet)));
+    }
+
     $categoriesList = array_map('mapCategoryRow', fetchRows(
         $db,
         'SELECT * FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC',
@@ -192,16 +271,24 @@ try {
         'SELECT * FROM goods WHERE last_update_code > :code ORDER BY last_update_code ASC',
         $params
     ));
-    $suppliersList = array_map('mapSupplierRow', fetchRows(
-        $db,
-        'SELECT * FROM supplier WHERE last_update_code > :code ORDER BY last_update_code ASC',
-        $params
-    ));
-    $supplierGoodsList = array_map('mapSupplierGoodsRow', fetchRows(
-        $db,
-        'SELECT * FROM supplier_goods WHERE last_update_code > :code ORDER BY last_update_code ASC',
-        $params
-    ));
+    $suppliersList = array_map('mapSupplierRow', $supplierRows);
+
+    $supplierGoodsList = [];
+    if (!empty($allowedSupplierIds)) {
+        $supplierPlaceholders = [];
+        $supplierGoodsParams = [':code' => $requestedCode];
+        foreach ($allowedSupplierIds as $idx => $supplierId) {
+            $param = ":sup{$idx}";
+            $supplierPlaceholders[] = $param;
+            $supplierGoodsParams[$param] = $supplierId;
+        }
+        $supplierGoodsSql = 'SELECT * FROM supplier_goods WHERE last_update_code > :code AND supplier_id IN (' . implode(',', $supplierPlaceholders) . ') ORDER BY last_update_code ASC';
+        $supplierGoodsList = array_map('mapSupplierGoodsRow', fetchRows(
+            $db,
+            $supplierGoodsSql,
+            $supplierGoodsParams
+        ));
+    }
 
     $payload = [
         'success' => true,
@@ -209,6 +296,8 @@ try {
         'settings' => $settingsSnapshot,
         'categoriesList' => $categoriesList,
         'goodsList' => $goodsList,
+        'addressList' => $addressList,
+        'customerAddressList' => $customerAddressList,
         'suppliersList' => $suppliersList,
         'supplierGoodsList' => $supplierGoodsList,
         // Legacy keys kept alongside new Android-aligned keys

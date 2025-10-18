@@ -176,7 +176,7 @@ class SupplierGoods {
         return $stmt->rowCount();
     }
 
-    public function insertSimpleRelation(int $supplierId, int $goodsId, int $price, int $lastUpdateCode): int {
+    public function insertSimpleRelation(int $supplierId, int $goodsId, int $price, int $lastUpdateCode, array $overrides = []): int {
         $data = [
             'supplier_id' => $supplierId,
             'goods_id' => $goodsId,
@@ -188,6 +188,12 @@ class SupplierGoods {
             'is_available' => 1,
             'last_update_code' => $lastUpdateCode
         ];
+        $allowedOverrides = ['discount_start','discount_price','min_order','is_available_for_credit','is_available'];
+        foreach ($allowedOverrides as $key) {
+            if (array_key_exists($key, $overrides) && $overrides[$key] !== null) {
+                $data[$key] = (int)$overrides[$key];
+            }
+        }
         $newId = $this->insertRelation($data);
         $this->touchSupplierLastUpdate($supplierId, $lastUpdateCode);
         return $newId;
