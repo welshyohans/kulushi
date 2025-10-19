@@ -22,13 +22,13 @@ if (!is_array($data)) {
 }
 
 foreach (['phone', 'password'] as $field) {
-    if (!array_key_exists($field, $data)) {
-        $response(400, ['success' => false, 'message' => "Missing field: {$field}"]);
+    if (!array_key_exists($field, $data) || trim((string)$data[$field]) === '') {
+        $response(400, ['success' => false, 'message' => "Missing or empty field: {$field}"]);
     }
 }
 
-$phone = (string)$data['phone'];
-$password = (string)$data['password'];
+$phone = trim((string)$data['phone']);
+$password = trim((string)$data['password']);
 
 try {
     $database = new Database();
