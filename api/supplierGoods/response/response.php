@@ -33,6 +33,13 @@ function normalizeRow(array $row): array {
     return $row;
 }
 
+// add helper to detect column existence
+function columnExists(PDO $db, string $table, string $column): bool {
+    $stmt = $db->prepare('SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = :table AND column_name = :column LIMIT 1');
+    $stmt->execute([':table' => $table, ':column' => $column]);
+    return (bool)$stmt->fetchColumn();
+}
+
 function mapAddressRow(array $row): array {
     return [
         'addressId' => (int)($row['id'] ?? 0),
@@ -152,10 +159,16 @@ try {
         $response(404, ['success' => false, 'message' => 'Customer not found', 'customerId' => $customerId]);
     }
 
-    if ($fcmCode !== null && $fcmCode !== '' && $customer['firebase_code'] !== $fcmCode) {
-        $upd = $db->prepare('UPDATE customer SET firebase_code = :code WHERE id = :id');
-        $upd->execute([':code' => $fcmCode, ':id' => $customerId]);
-        $customer['firebase_code'] = $fcmCode;
+    // decide which column to update/use for FCM token: prefer fcm_code if present, otherwise use firebase_code
+    $fcmColumn = columnExists($db, 'customer', 'fcm_code') ? 'fcm_code' : 'firebase_code';
+
+    if ($fcmCode !== null && $fcmCode !== '') {
+        $currentToken = isset($customer[$fcmColumn]) ? (string)$customer[$fcmColumn] : '';
+        if ($currentToken !== $fcmCode) {
+            $upd = $db->prepare("UPDATE customer SET {$fcmColumn} = :code WHERE id = :id");
+            $upd->execute([':code' => $fcmCode, ':id' => $customerId]);
+            $customer[$fcmColumn] = $fcmCode;
+        }
     }
 
     $cityParts = [];
@@ -194,7 +207,8 @@ try {
         'permittedCredit' => $permittedCredit,
         'userType' => (string)($customer['user_type'] ?? ''),
         'lastUpdateCode' => (string)$currentLastCode,
-        'fcmCode' => (string)($customer['firebase_code'] ?? ''),
+        // use the chosen column value here
+        'fcmCode' => (string)($customer[$fcmColumn] ?? ''),
         // Legacy keys kept for backward compatibility
         'customerName' => (string)$customer['name'],
         'customerShopName' => (string)$customer['shop_name'],
