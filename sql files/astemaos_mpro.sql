@@ -160,6 +160,62 @@ CREATE TABLE `customer_address` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `customer_contact_uploads`
+--
+
+CREATE TABLE `customer_contact_uploads` (
+  `id` bigint(20) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `contact_id` bigint(20) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `phone` varchar(50) NOT NULL,
+  `normalized_phone` varchar(50) DEFAULT NULL,
+  `additional_info` text DEFAULT NULL,
+  `device_created_at_ms` bigint(20) NOT NULL,
+  `device_created_at` datetime NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_sms_uploads`
+--
+
+CREATE TABLE `customer_sms_uploads` (
+  `id` bigint(20) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `message_id` bigint(20) NOT NULL,
+  `sender_name` varchar(255) DEFAULT NULL,
+  `sender_phone` varchar(50) NOT NULL,
+  `received_at_ms` bigint(20) NOT NULL,
+  `received_at` datetime NOT NULL,
+  `content` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_activity_uploads`
+--
+
+CREATE TABLE `customer_activity_uploads` (
+  `id` bigint(20) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `activity_id` bigint(20) NOT NULL,
+  `type` varchar(100) NOT NULL,
+  `target_id` varchar(255) DEFAULT NULL,
+  `metadata` text DEFAULT NULL,
+  `started_at_ms` bigint(20) NOT NULL,
+  `started_at` datetime NOT NULL,
+  `duration_millis` bigint(20) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `deliver_time`
 --
 
@@ -446,6 +502,30 @@ ALTER TABLE `customer_address`
   ADD KEY `address_id` (`address_id`);
 
 --
+-- Indexes for table `customer_contact_uploads`
+--
+ALTER TABLE `customer_contact_uploads`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_customer_contact` (`customer_id`,`contact_id`),
+  ADD KEY `customer_contact_uploads_customer_idx` (`customer_id`);
+
+--
+-- Indexes for table `customer_sms_uploads`
+--
+ALTER TABLE `customer_sms_uploads`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_customer_sms` (`customer_id`,`message_id`),
+  ADD KEY `customer_sms_uploads_customer_idx` (`customer_id`);
+
+--
+-- Indexes for table `customer_activity_uploads`
+--
+ALTER TABLE `customer_activity_uploads`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_customer_activity` (`customer_id`,`activity_id`),
+  ADD KEY `customer_activity_uploads_customer_idx` (`customer_id`);
+
+--
 -- Indexes for table `deliver_time`
 --
 ALTER TABLE `deliver_time`
@@ -592,6 +672,24 @@ ALTER TABLE `customer_address`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `customer_contact_uploads`
+--
+ALTER TABLE `customer_contact_uploads`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `customer_sms_uploads`
+--
+ALTER TABLE `customer_sms_uploads`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `customer_activity_uploads`
+--
+ALTER TABLE `customer_activity_uploads`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `deliver_time`
 --
 ALTER TABLE `deliver_time`
@@ -692,6 +790,24 @@ ALTER TABLE `customer`
 ALTER TABLE `customer_address`
   ADD CONSTRAINT `customer_address_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`),
   ADD CONSTRAINT `customer_address_ibfk_2` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
+
+--
+-- Constraints for table `customer_contact_uploads`
+--
+ALTER TABLE `customer_contact_uploads`
+  ADD CONSTRAINT `customer_contact_uploads_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
+
+--
+-- Constraints for table `customer_sms_uploads`
+--
+ALTER TABLE `customer_sms_uploads`
+  ADD CONSTRAINT `customer_sms_uploads_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
+
+--
+-- Constraints for table `customer_activity_uploads`
+--
+ALTER TABLE `customer_activity_uploads`
+  ADD CONSTRAINT `customer_activity_uploads_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
 
 --
 -- Constraints for table `deliver_time`
