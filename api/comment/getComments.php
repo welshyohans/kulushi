@@ -23,7 +23,7 @@ try {
         SELECT c.name AS customerName, a.sub_city AS addressName, cm.comment, cm.star_value AS StarValue
         FROM comments cm
         LEFT JOIN customer c ON cm.customer_id = c.id
-        LEFT JOIN address a ON a.id = cm.address_id
+        LEFT JOIN address a ON a.id = c.address_id
         WHERE cm.goods_id = :goodsId
     ");
     $stmt->bindParam(':goodsId', $goodsId);
