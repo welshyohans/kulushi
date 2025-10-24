@@ -20,10 +20,10 @@ $goodsId = $input['goodsId'];
 
 try {
     $stmt = $conn->prepare("
-        SELECT c.name AS customerName, ca.address_name AS addressName, cm.comment, cm.star_value AS StarValue
+        SELECT c.name AS customerName, a.sub_city AS addressName, cm.comment, cm.star_value AS StarValue
         FROM comments cm
         LEFT JOIN customer c ON cm.customer_id = c.id
-        LEFT JOIN customer_address ca ON ca.id = cm.customer_address_id
+        LEFT JOIN address a ON a.id = cm.address_id
         WHERE cm.goods_id = :goodsId
     ");
     $stmt->bindParam(':goodsId', $goodsId);
