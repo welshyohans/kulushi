@@ -22,8 +22,8 @@ try {
     $stmt = $conn->prepare("
         SELECT c.name AS customerName, ca.address_name AS addressName, cm.comment, cm.star_value AS StarValue
         FROM comments cm
-        JOIN customer c ON cm.customer_id = c.id
-        JOIN customer_address ca ON c.id = ca.customer_id
+        LEFT JOIN customer c ON cm.customer_id = c.id
+        LEFT JOIN customer_address ca ON c.id = ca.customer_id
         WHERE cm.goods_id = :goodsId
     ");
     $stmt->bindParam(':goodsId', $goodsId);
