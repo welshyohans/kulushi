@@ -45,6 +45,7 @@ function mapAddressRow(array $row): array {
         'addressId' => (int)($row['id'] ?? 0),
         'city' => (string)($row['city'] ?? ''),
         'subCity' => (string)($row['sub_city'] ?? ''),
+        'hasSupplier' => (int)($row['has_supplier'] ?? 0),
         'lastUpdateCode' => (int)($row['last_update_code'] ?? 0),
     ];
 }
