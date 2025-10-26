@@ -6,6 +6,32 @@ class Address{
     public function __construct($conn){
         $this->conn = $conn;
     }
+    public $customer_id;
+    public $address_id;
+
+    public function deleteCustomerAddress(){
+        $query = "DELETE FROM customer_address WHERE customer_id = :customer_id AND address_id = :address_id";
+        
+        $stmt = $this->conn->prepare($query);
+        
+        // Clean data
+        $this->customer_id = htmlspecialchars(strip_tags($this->customer_id));
+        $this->address_id = htmlspecialchars(strip_tags($this->address_id));
+        
+        // Bind data
+        $stmt->bindParam(':customer_id', $this->customer_id);
+        $stmt->bindParam(':address_id', $this->address_id);
+        
+        // Execute query
+        if($stmt->execute()){
+            return true;
+        }
+        
+        // Print error if something goes wrong
+        printf("Error: %s.\n", $stmt->error);
+        
+        return false;
+    }
   
     public function getAllAddress(){
         $query = "SELECT * FROM address";
