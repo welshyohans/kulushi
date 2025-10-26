@@ -305,8 +305,10 @@ CREATE TABLE `ordered_list` (
   `id` int(11) NOT NULL,
   `orders_id` int(11) DEFAULT NULL,
   `supplier_goods_id` int(11) DEFAULT NULL,
+  `goods_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
-  `each_price` int(11) DEFAULT NULL,
+  `each_price` decimal(12,2) DEFAULT NULL,
+  `eligible_for_credit` tinyint(4) DEFAULT 1,
   `status` tinyint(4) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
@@ -319,9 +321,10 @@ CREATE TABLE `ordered_list` (
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
-  `total_price` int(11) DEFAULT NULL,
-  `profit` int(11) DEFAULT NULL,
-  `available_credit` int(11) DEFAULT NULL,
+  `total_price` decimal(12,2) DEFAULT NULL,
+  `profit` int(11) DEFAULT 0,
+  `cash_amount` decimal(12,2) DEFAULT 0,
+  `credit_amount` decimal(12,2) DEFAULT NULL,
   `order_time` timestamp NOT NULL DEFAULT current_timestamp(),
   `deliver_time` timestamp NULL DEFAULT NULL,
   `deliver_status` tinyint(4) DEFAULT 1 COMMENT 'ordered=1\r\nfast =2\r\npick-up =3\r\nprepared =4\r\nshipped =5\r\ndelivered =6\r\ncancelled =7\r\nchecked =8\r\nmixed =9',

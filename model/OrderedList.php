@@ -10,8 +10,10 @@ class OrderedList
     public $id;
     public $orders_id;
     public $supplier_goods_id;
+    public $goods_id;
     public $quantity;
     public $each_price;
+    public $eligible_for_credit;
     public $status;
 
     // CONSTRUCTOR
@@ -28,8 +30,10 @@ class OrderedList
         SET
         orders_id = :orders_id,
         supplier_goods_id = :supplier_goods_id,
+        goods_id = :goods_id,
         quantity = :quantity,
         each_price = :each_price,
+        eligible_for_credit = :eligible_for_credit,
         status = :status';
 
         // PREPARE STATEMENT
@@ -38,15 +42,19 @@ class OrderedList
         // CLEANING DATA
         $this->orders_id = htmlspecialchars(strip_tags($this->orders_id));
         $this->supplier_goods_id = htmlspecialchars(strip_tags($this->supplier_goods_id));
+        $this->goods_id = htmlspecialchars(strip_tags($this->goods_id));
         $this->quantity = htmlspecialchars(strip_tags($this->quantity));
         $this->each_price = htmlspecialchars(strip_tags($this->each_price));
+        $this->eligible_for_credit = htmlspecialchars(strip_tags($this->eligible_for_credit));
         $this->status = htmlspecialchars(strip_tags($this->status));
 
         // BINDING
         $stmt->bindParam(':orders_id', $this->orders_id);
         $stmt->bindParam(':supplier_goods_id', $this->supplier_goods_id);
+        $stmt->bindParam(':goods_id', $this->goods_id);
         $stmt->bindParam(':quantity', $this->quantity);
         $stmt->bindParam(':each_price', $this->each_price);
+        $stmt->bindParam(':eligible_for_credit', $this->eligible_for_credit);
         $stmt->bindParam(':status', $this->status);
 
         // EXECUTE

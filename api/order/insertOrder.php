@@ -20,19 +20,19 @@ if (!$data) {
     respond(400, ['success' => false, 'message' => 'Invalid JSON payload']);
 }
 
-$requiredFields = ['customer_id', 'total_price', 'profit', 'available_credit', 'deliver_status', 'ordered_list'];
+$requiredFields = ['customerId', 'cashAmount', 'creditAmount', 'totalAmount', 'items'];
 foreach ($requiredFields as $field) {
     if (!property_exists($data, $field)) {
         respond(400, ['success' => false, 'message' => "Missing field: {$field}"]);
     }
 }
-if (!is_array($data->ordered_list) || empty($data->ordered_list)) {
-    respond(400, ['success' => false, 'message' => 'ordered_list must be a non-empty array']);
+if (!is_array($data->items) || empty($data->items)) {
+    respond(400, ['success' => false, 'message' => 'items must be a non-empty array']);
 }
 
 // MAIN RECIEVEING AND PROCESSING ORDER
 // CHECK IF RECEIVED DATA IS NOT EMPTY
-$nonEmptyFields = ['customer_id', 'total_price', 'profit', 'available_credit', 'deliver_status'];
+$nonEmptyFields = ['customerId', 'totalAmount'];
 foreach ($nonEmptyFields as $field) {
     $value = $data->{$field} ?? null;
     if ($value === null || (is_string($value) && trim($value) === '')) {
@@ -42,12 +42,20 @@ foreach ($nonEmptyFields as $field) {
 
 // CREATE ORDER
 $order = new Orders($conn);
-$order->customer_id = $data->customer_id;
-$order->total_price = $data->total_price;
-$order->profit = $data->profit;
-$order->available_credit = $data->available_credit;
-$order->deliver_status = $data->deliver_status;
+$order->customer_id = $data->customerId;
+$order->total_price = $data->totalAmount;
+$order->cash_amount = $data->cashAmount;
+$order->credit_amount = $data->creditAmount;
+$order->deliver_status = property_exists($data, 'deliverStatus') ? $data->deliverStatus : 0;
 $order->comment = property_exists($data, 'comment') ? (string) $data->comment : '';
+
+// Calculate profit from items
+$totalProfit = 0;
+foreach ($data->items as $item) {
+    // Profit calculation can be done here if needed
+    // For now, we'll set it to 0 or calculate based on business logic
+}
+$order->profit = $totalProfit;
 
 try {
     $conn->beginTransaction();
@@ -61,18 +69,20 @@ try {
 
     // CREATE ORDERED LIST
     $ordered_list = new OrderedList($conn);
-    foreach ($data->ordered_list as $item) {
-        foreach (['supplier_goods_id', 'quantity', 'each_price', 'status'] as $itemField) {
+    foreach ($data->items as $item) {
+        foreach (['supplierGoodsId', 'goodsId', 'quantity', 'unitPrice', 'subtotal', 'eligibleForCredit'] as $itemField) {
             if (!property_exists($item, $itemField)) {
                 $conn->rollBack();
-                respond(400, ['success' => false, 'message' => "Missing ordered_list field: {$itemField}"]);
+                respond(400, ['success' => false, 'message' => "Missing item field: {$itemField}"]);
             }
         }
         $ordered_list->orders_id = $order_id;
-        $ordered_list->supplier_goods_id = $item->supplier_goods_id;
+        $ordered_list->supplier_goods_id = $item->supplierGoodsId;
+        $ordered_list->goods_id = $item->goodsId;
         $ordered_list->quantity = $item->quantity;
-        $ordered_list->each_price = $item->each_price;
-        $ordered_list->status = $item->status;
+        $ordered_list->each_price = $item->unitPrice;
+        $ordered_list->eligible_for_credit = $item->eligibleForCredit ? 1 : 0;
+        $ordered_list->status = 0; // Default status
         if (!$ordered_list->create()) {
             $conn->rollBack();
             respond(500, ['success' => false, 'message' => 'Error creating ordered list']);
