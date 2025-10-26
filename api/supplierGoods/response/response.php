@@ -197,6 +197,15 @@ try {
     $expireTime = (int)$settingsModel->getValue('expire_time', 0);
     $permittedCredit = array_key_exists('permitted_credit', $customer) ? (int)$customer['permitted_credit'] : 0;
 
+    // fetch oldest unpaid due date from credit table (paid < total)
+    $dueDate = '';
+    $dueStmt = $db->prepare('SELECT due_date FROM credit WHERE customer_id = :customer_id AND paid < total ORDER BY due_date ASC LIMIT 1');
+    $dueStmt->execute([':customer_id' => $customerId]);
+    $dueVal = $dueStmt->fetchColumn();
+    if ($dueVal !== false && $dueVal !== null) {
+        $dueDate = (string)$dueVal;
+    }
+
     $settingsSnapshot = [
         'customerId' => $customerId,
         'shopName' => (string)$customer['shop_name'],
@@ -204,10 +213,13 @@ try {
         'phoneNumber' => (string)$customer['phone'],
         'address' => $address,
         'totalCredit' => (int)$customer['total_credit'],
+        'unpaidAmount' => (int)$customer['total_unpaid'],
         'expireTime' => $expireTime,
         'permittedCredit' => $permittedCredit,
         'userType' => (string)($customer['user_type'] ?? ''),
         'lastUpdateCode' => (string)$currentLastCode,
+        // due date from credit table (oldest where paid < total)
+        'dueDate' => $dueDate,
         // use the chosen column value here
         'fcmCode' => (string)($customer[$fcmColumn] ?? ''),
         // Legacy keys kept for backward compatibility
