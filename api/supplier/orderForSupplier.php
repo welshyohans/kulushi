@@ -22,7 +22,8 @@ if (!is_array($data)) {
     $respond(400, ['status' => 'error', 'message' => 'Invalid JSON payload']);
 }
 
-$requiredFields = ['customerId', 'totalPrice', 'orderTime', 'supplierOrderLists'];
+// replace required fields line to include supplierId
+$requiredFields = ['customerId', 'supplierId', 'totalPrice', 'orderTime', 'supplierOrderLists'];
 foreach ($requiredFields as $field) {
     if (!array_key_exists($field, $data)) {
         $respond(400, ['status' => 'error', 'message' => "Missing field: {$field}"]);
@@ -32,6 +33,12 @@ foreach ($requiredFields as $field) {
 $customerId = filter_var($data['customerId'], FILTER_VALIDATE_INT);
 if ($customerId === false || $customerId <= 0) {
     $respond(400, ['status' => 'error', 'message' => 'Invalid customerId']);
+}
+
+// Added supplierId validation
+$supplierId = filter_var($data['supplierId'], FILTER_VALIDATE_INT);
+if ($supplierId === false || $supplierId <= 0) {
+    $respond(400, ['status' => 'error', 'message' => 'Invalid supplierId']);
 }
 
 $totalPrice = filter_var($data['totalPrice'], FILTER_VALIDATE_FLOAT);
@@ -107,11 +114,13 @@ try {
     $db->beginTransaction();
 
     $insertOrder = $db->prepare(
-        'INSERT INTO supplier_order (customer_id, total_price, order_time, comment)
-         VALUES (:customer_id, :total_price, :order_time, :comment)'
+        // include supplier_id in the insert
+        'INSERT INTO supplier_order (supplier_id, customer_id, total_price, order_time, comment)
+         VALUES (:supplier_id, :customer_id, :total_price, :order_time, :comment)'
     );
 
     $insertOrder->execute([
+        ':supplier_id' => $supplierId,
         ':customer_id' => $customerId,
         ':total_price' => $totalPrice,
         ':order_time' => $orderTimeFormatted,
