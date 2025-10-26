@@ -419,6 +419,38 @@ CREATE TABLE `supplier_goods` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `supplier_order`
+--
+
+CREATE TABLE `supplier_order` (
+  `id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `total_price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `order_time` datetime NOT NULL,
+  `comment` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `supplier_order_list`
+--
+
+CREATE TABLE `supplier_order_list` (
+  `id` int(11) NOT NULL,
+  `supplier_order_id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `goods_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 0,
+  `price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `terms_conditions`
 --
 
@@ -613,6 +645,22 @@ ALTER TABLE `supplier_goods`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `supplier_order`
+--
+ALTER TABLE `supplier_order`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `customer_id` (`customer_id`);
+
+--
+-- Indexes for table `supplier_order_list`
+--
+ALTER TABLE `supplier_order_list`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `supplier_order_id` (`supplier_order_id`),
+  ADD KEY `goods_id` (`goods_id`),
+  ADD KEY `order_id` (`order_id`);
+
+--
 -- Indexes for table `terms_conditions`
 --
 ALTER TABLE `terms_conditions`
@@ -761,6 +809,18 @@ ALTER TABLE `supplier_goods`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `supplier_order`
+--
+ALTER TABLE `supplier_order`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `supplier_order_list`
+--
+ALTER TABLE `supplier_order_list`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `terms_conditions`
 --
 ALTER TABLE `terms_conditions`
@@ -844,6 +904,19 @@ ALTER TABLE `manual_sell`
 --
 ALTER TABLE `ordered_list`
   ADD CONSTRAINT `ordered_list_ibfk_1` FOREIGN KEY (`orders_id`) REFERENCES `orders` (`id`);
+
+--
+-- Constraints for table `supplier_order`
+--
+ALTER TABLE `supplier_order`
+  ADD CONSTRAINT `supplier_order_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
+
+--
+-- Constraints for table `supplier_order_list`
+--
+ALTER TABLE `supplier_order_list`
+  ADD CONSTRAINT `supplier_order_list_ibfk_1` FOREIGN KEY (`supplier_order_id`) REFERENCES `supplier_order` (`id`),
+  ADD CONSTRAINT `supplier_order_list_ibfk_2` FOREIGN KEY (`goods_id`) REFERENCES `goods` (`id`);
 
 --
 -- Constraints for table `purchase_goods`
