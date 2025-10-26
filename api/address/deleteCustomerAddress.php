@@ -26,15 +26,24 @@ if(isset($data->customerId) && isset($data->addressId)) {
     // Delete post
     if($address->deleteCustomerAddress()) {
         echo json_encode(
-            array('message' => 'Customer Address Deleted')
+            array(
+                'success' => true,
+                'message' => 'Customer Address Deleted'
+            )
         );
     } else {
         echo json_encode(
-            array('message' => 'Customer Address Not Deleted')
+            array(
+                'success' => false,
+                'message' => 'Customer Address Not Deleted'
+            )
         );
     }
 } else {
     echo json_encode(
-        array('message' => 'customerId and addressId are required.')
+        array(
+            'success' => false,
+            'message' => 'customerId and addressId are required.'
+        )
     );
 }
