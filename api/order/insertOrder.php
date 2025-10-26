@@ -12,7 +12,7 @@ include_once '../../model/Orders.php';
 include_once '../../model/OrderedList.php';
 
 $db_connection = new Database();
-$conn = $db_connection->getConnection();
+$conn = $db_connection->connect();
 
 // GET DATA FROM REQUEST
 $data = json_decode(file_get_contents("php://input"));
