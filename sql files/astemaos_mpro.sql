@@ -307,8 +307,7 @@ CREATE TABLE `ordered_list` (
   `supplier_goods_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
   `each_price` int(11) DEFAULT NULL,
-  `is_prepare` tinyint(4) NOT NULL DEFAULT 0,
-  `is_cancelled` tinyint(4) NOT NULL DEFAULT 0
+  `status` tinyint(4) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -322,6 +321,7 @@ CREATE TABLE `orders` (
   `customer_id` int(11) DEFAULT NULL,
   `total_price` int(11) DEFAULT NULL,
   `profit` int(11) DEFAULT NULL,
+  `available_credit` int(11) DEFAULT NULL,
   `order_time` timestamp NOT NULL DEFAULT current_timestamp(),
   `deliver_time` timestamp NULL DEFAULT NULL,
   `deliver_status` tinyint(4) DEFAULT 1 COMMENT 'ordered=1\r\nfast =2\r\npick-up =3\r\nprepared =4\r\nshipped =5\r\ndelivered =6\r\ncancelled =7\r\nchecked =8\r\nmixed =9',
