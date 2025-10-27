@@ -87,7 +87,7 @@ class FCMService
     }
 
     // Send FCM notification using HTTP v1 API
-    public function sendFCM($token, $title, $body, $isNotifable, $notificationDetail)
+    public function sendFCM($token, $title, $body, $isNotifable, $notificationDetail = null, array $dataPayload = [])
     {
         $accessToken = $this->getAccessToken();
         $url = 'https://fcm.googleapis.com/v1/projects/' . $this->projectId . '/messages:send';
@@ -96,11 +96,18 @@ class FCMService
         $message = [
             'message' => [
                 'token' => $token,
-                'data' => [
-                    'body' => $notificationDetail,
-                ],
             ],
         ];
+
+        $data = $dataPayload;
+
+        if ($notificationDetail !== null) {
+            $data['body'] = $notificationDetail;
+        }
+
+        if (!empty($data)) {
+            $message['message']['data'] = $data;
+        }
 
         if ($isNotifable == 1) {
             $message['message']['notification'] = [
@@ -129,7 +136,7 @@ class FCMService
         return $result;
     }
     
-public function sendMultipleFCM($tokens, $title, $body, $isNotifable, $notificationDetail)
+public function sendMultipleFCM($tokens, $title, $body, $isNotifable, $notificationDetail = null, array $dataPayload = [])
 {
     $accessToken = $this->getAccessToken();
     $url = 'https://fcm.googleapis.com/v1/projects/' . $this->projectId . '/messages:send';
@@ -146,11 +153,18 @@ public function sendMultipleFCM($tokens, $title, $body, $isNotifable, $notificat
         $message = [
             'message' => [
                 'token' => $token, // Send to each token individually
-                'data' => [
-                    'body' => $notificationDetail,
-                ],
             ],
         ];
+
+        $data = $dataPayload;
+
+        if ($notificationDetail !== null) {
+            $data['body'] = $notificationDetail;
+        }
+
+        if (!empty($data)) {
+            $message['message']['data'] = $data;
+        }
 
         if ($isNotifable == 1) {
             $message['message']['notification'] = [
