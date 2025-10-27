@@ -18,7 +18,7 @@ $title = "me i am title";
     
   $fcm = new FCMService('from-merkato', '../../model/mp.json');
   //$notificationDetail = '1$0&'.$title.'&'.$body.'&no|'.$goodsIdList;
-  $result = $fcm->sendFCM($fcmCode, $title, "notification body", 0, "notification detail");
+  $result = $fcm->sendFCM($fcmCode, $title, "notification body");
 
 echo $result;
 

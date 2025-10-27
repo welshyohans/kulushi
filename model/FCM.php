@@ -87,7 +87,7 @@ class FCMService
     }
 
     // Send FCM notification using HTTP v1 API
-    public function sendFCM($token, $title, $body, $isNotifable, $notificationDetail = null, array $dataPayload = [])
+    public function sendFCM($token, $title, $body, array $dataPayload = [])
     {
         $accessToken = $this->getAccessToken();
         $url = 'https://fcm.googleapis.com/v1/projects/' . $this->projectId . '/messages:send';
@@ -100,21 +100,17 @@ class FCMService
         ];
 
         $data = $dataPayload;
-
-        if ($notificationDetail !== null) {
-            $data['body'] = $notificationDetail;
-        }
+        
 
         if (!empty($data)) {
             $message['message']['data'] = $data;
         }
 
-        if ($isNotifable == 1) {
             $message['message']['notification'] = [
                 'title' => $title,
                 'body' => $body,
             ];
-        }
+        
 
         // Setup headers including OAuth 2.0 token
         $headers = [
@@ -136,57 +132,6 @@ class FCMService
         return $result;
     }
     
-public function sendMultipleFCM($tokens, $title, $body, $isNotifable, $notificationDetail = null, array $dataPayload = [])
-{
-    $accessToken = $this->getAccessToken();
-    $url = 'https://fcm.googleapis.com/v1/projects/' . $this->projectId . '/messages:send';
-
-    // Setup headers including OAuth 2.0 token
-    $headers = [
-        'Authorization: Bearer ' . $accessToken,
-        'Content-Type: application/json',
-    ];
-
-    // Loop through tokens and send notification to each user
-    foreach ($tokens as $token) {
-        // Create message payload
-        $message = [
-            'message' => [
-                'token' => $token, // Send to each token individually
-            ],
-        ];
-
-        $data = $dataPayload;
-
-        if ($notificationDetail !== null) {
-            $data['body'] = $notificationDetail;
-        }
-
-        if (!empty($data)) {
-            $message['message']['data'] = $data;
-        }
-
-        if ($isNotifable == 1) {
-            $message['message']['notification'] = [
-                'title' => $title,
-                'body' => $body,
-            ];
-        }
-
-        // Send HTTP request to FCM API
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($message));
-        $result = curl_exec($ch);
-        curl_close($ch);
-    }
-
-    return "All notifications sent.";
-}
 
 }
 
