@@ -3,6 +3,8 @@ header('Content-Type: application/json');
 
 include_once '../../../config/Database.php';
 include_once '../../../model/Settings.php';
+require_once __DIR__ . '/../load_env.php';
+loadEnv(__DIR__ . '/../.env');
 
 $response = function (int $code, array $payload): void {
     http_response_code($code);
@@ -222,6 +224,7 @@ try {
         'dueDate' => $dueDate,
         // use the chosen column value here
         'fcmCode' => (string)($customer[$fcmColumn] ?? ''),
+        'geminiApiKey'=>getenv('GEMINI_API_KEY') ?: '',
         // Legacy keys kept for backward compatibility
         'customerName' => (string)$customer['name'],
         'customerShopName' => (string)$customer['shop_name'],
