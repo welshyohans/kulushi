@@ -1,8 +1,9 @@
 <?php
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/../../config/Database.php';
-require_once __DIR__ . '/../../model/SMS.php';
+
+include_once '../../config/Database.php';
+include_once '../../model/SMS.php';
 
 $respond = function (int $status, array $payload): void {
     http_response_code($status);
