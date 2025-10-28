@@ -95,7 +95,7 @@ try {
 
     $respond(200, [
         'orders' => $orders,
-        'pyaments' => $payments
+        'payments' => $payments
     ]);
 } catch (PDOException $exception) {
     $respond(500, [
