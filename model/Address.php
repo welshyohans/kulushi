@@ -46,8 +46,7 @@ class Address{
                 extract($row);
                 $eachAddress = array(
                     "addressId" =>$id,
-                    "addressName" =>$sub_city,
-                    "commissionAddress"=>$commission_address
+                    "addressName" =>$sub_city
                 );
                 array_push($allAddress,$eachAddress);
             }
