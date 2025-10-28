@@ -140,7 +140,8 @@ CREATE TABLE `customer` (
   `total_unpaid` int(11) NOT NULL DEFAULT 0,
   `latitude` decimal(12,2) DEFAULT NULL,
   `longitude` decimal(12,2) DEFAULT NULL,
-  `permitted_credit` int(11) NOT NULL
+  `permitted_credit` int(11) NOT NULL,
+  `delivery_time_info` varchar(200) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------

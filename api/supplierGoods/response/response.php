@@ -226,6 +226,7 @@ try {
         'customerName' => (string)$customer['name'],
         'customerShopName' => (string)$customer['shop_name'],
         'addressName' => $addressName,
+        'deliveryTimeInfo' => (string)($customer['delivery_time_info'] ?? ''),
         'requestedLastUpdateCode' => $requestedCode
     ];
 
