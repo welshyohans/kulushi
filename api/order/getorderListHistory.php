@@ -73,7 +73,8 @@ try {
             g.image_url AS goods_image,
             ol.quantity,
             COALESCE(ol.each_price, sg.price) AS unit_price,
-            s.shop_name AS supplier_name
+            s.shop_name AS supplier_name,
+            ol.eligible_for_credit
         FROM ordered_list ol
         LEFT JOIN goods g ON g.id = ol.goods_id
         LEFT JOIN supplier_goods sg ON sg.id = ol.supplier_goods_id
@@ -86,11 +87,12 @@ try {
 
     $items = array_map(static function (array $row): array {
         return [
-            'goodsName' => $row['goods_name'],
-            'goodsImage' => $row['goods_image'],
-            'quantity' => $row['quantity'] !== null ? (int)$row['quantity'] : null,
-            'price' => $row['unit_price'] !== null ? (float)$row['unit_price'] : null,
-            'supplierName' => $row['supplier_name']
+            'goodsName' => $row['goods_name'] ?? '',
+            'goodsImage' => $row['goods_image'] ?? '',
+            'quantity' => $row['quantity'] !== null ? (string)(int)$row['quantity'] : '0',
+            'price' => $row['unit_price'] !== null ? (string)(float)$row['unit_price'] : '0',
+            'supplierName' => $row['supplier_name'] ?? '',
+            'eligibleForCredit' => isset($row['eligible_for_credit']) ? (bool)$row['eligible_for_credit'] : false
         ];
     }, $rows);
 
