@@ -69,16 +69,30 @@ try {
         ]);
     }
 
-    $ordersStmt = $db->prepare('SELECT total_price, order_time, deliver_status FROM orders WHERE customer_id = :customerId ORDER BY order_time DESC');
+    $ordersStmt = $db->prepare('SELECT total_price, order_time, deliver_status, unpaid_cash, unpaid_credit FROM orders WHERE customer_id = :customerId ORDER BY order_time DESC');
     $ordersStmt->execute([':customerId' => $customerId]);
     $orderRows = $ordersStmt->fetchAll();
     $orders = array_map(function (array $row): array {
         return [
             'totalPrice' => $row['total_price'] !== null ? (float)$row['total_price'] : null,
             'orderTime' => $row['order_time'],
-            'deliverStatus' => $row['deliver_status'] !== null ? (int)$row['deliver_status'] : null
+            'deliverStatus' => $row['deliver_status'] !== null ? (int)$row['deliver_status'] : null,
+            'unpaidCash' => $row['unpaid_cash'] !== null ? (float)$row['unpaid_cash'] : null,
+            'unpaidCredit' => $row['unpaid_credit'] !== null ? (float)$row['unpaid_credit'] : null
         ];
     }, $orderRows);
+
+    $totalsStmt = $db->prepare('
+        SELECT
+            COALESCE(SUM(CASE WHEN deliver_status = 6 AND unpaid_cash > 0 THEN unpaid_cash ELSE 0 END), 0) AS total_unpaid_cash,
+            COALESCE(SUM(CASE WHEN deliver_status = 6 AND unpaid_credit > 0 THEN unpaid_credit ELSE 0 END), 0) AS total_unpaid_credit
+        FROM orders
+        WHERE customer_id = :customerId
+    ');
+    $totalsStmt->execute([':customerId' => $customerId]);
+    $totalsRow = $totalsStmt->fetch() ?: ['total_unpaid_cash' => 0, 'total_unpaid_credit' => 0];
+    $totalUnpaidCash = (float)$totalsRow['total_unpaid_cash'];
+    $totalUnpaidCredit = (float)$totalsRow['total_unpaid_credit'];
 
     $paymentsStmt = $db->prepare('SELECT paid_date, amount, `through`, additional_info, credit_left_after_payment FROM payments WHERE customer_id = :customerId ORDER BY paid_date DESC');
     $paymentsStmt->execute([':customerId' => $customerId]);
@@ -95,7 +109,9 @@ try {
 
     $respond(200, [
         'orders' => $orders,
-        'payments' => $payments
+        'payments' => $payments,
+        'totaUnpaidCash' => $totalUnpaidCash,
+        'totalUnpaidCredit' => $totalUnpaidCredit
     ]);
 } catch (PDOException $exception) {
     $respond(500, [

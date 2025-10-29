@@ -326,6 +326,8 @@ CREATE TABLE `orders` (
   `customer_id` int(11) DEFAULT NULL,
   `total_price` decimal(12,2) DEFAULT NULL,
   `profit` int(11) DEFAULT 0,
+  `unpaid_cash` int(11) DEFAULT 0,
+  `unpaid_credit` int(11) DEFAULT 0,
   `cash_amount` decimal(12,2) DEFAULT 0,
   `credit_amount` decimal(12,2) DEFAULT NULL,
   `order_time` timestamp NOT NULL DEFAULT current_timestamp(),

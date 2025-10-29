@@ -3,8 +3,8 @@ header('Content-Type: application/json');
 
 include_once '../../../config/Database.php';
 include_once '../../../model/Settings.php';
-require_once __DIR__ . '/../load_env.php';
-loadEnv(__DIR__ . '/../.env');
+include_once '../../../load_env.php';
+loadEnv('../../../.env');
 
 $response = function (int $code, array $payload): void {
     http_response_code($code);
