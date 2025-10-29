@@ -339,6 +339,34 @@ CREATE TABLE `orders` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `return_order`
+--
+
+CREATE TABLE `return_order` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `total_price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `is_comfirmed` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `returnOrderList`
+--
+
+CREATE TABLE `returnOrderList` (
+  `id` int(11) NOT NULL,
+  `order_list_id` int(11) NOT NULL,
+  `return_order_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 0,
+  `price` decimal(12,2) NOT NULL DEFAULT 0.00
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `payments`
 --
 
@@ -615,6 +643,22 @@ ALTER TABLE `orders`
   ADD KEY `customer_id` (`customer_id`);
 
 --
+-- Indexes for table `return_order`
+--
+ALTER TABLE `return_order`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`),
+  ADD KEY `customer_id` (`customer_id`);
+
+--
+-- Indexes for table `returnOrderList`
+--
+ALTER TABLE `returnOrderList`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_list_id` (`order_list_id`),
+  ADD KEY `return_order_id` (`return_order_id`);
+
+--
 -- Indexes for table `payments`
 --
 ALTER TABLE `payments`
@@ -788,6 +832,18 @@ ALTER TABLE `orders`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `return_order`
+--
+ALTER TABLE `return_order`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `returnOrderList`
+--
+ALTER TABLE `returnOrderList`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
@@ -907,6 +963,20 @@ ALTER TABLE `manual_sell`
 --
 ALTER TABLE `ordered_list`
   ADD CONSTRAINT `ordered_list_ibfk_1` FOREIGN KEY (`orders_id`) REFERENCES `orders` (`id`);
+
+--
+-- Constraints for table `return_order`
+--
+ALTER TABLE `return_order`
+  ADD CONSTRAINT `return_order_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+  ADD CONSTRAINT `return_order_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
+
+--
+-- Constraints for table `returnOrderList`
+--
+ALTER TABLE `returnOrderList`
+  ADD CONSTRAINT `returnOrderList_ibfk_1` FOREIGN KEY (`return_order_id`) REFERENCES `return_order` (`id`),
+  ADD CONSTRAINT `returnOrderList_ibfk_2` FOREIGN KEY (`order_list_id`) REFERENCES `ordered_list` (`id`);
 
 --
 -- Constraints for table `supplier_order`
