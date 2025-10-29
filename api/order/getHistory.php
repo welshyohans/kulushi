@@ -111,7 +111,9 @@ try {
         'orders' => $orders,
         'payments' => $payments,
         'totaUnpaidCash' => $totalUnpaidCash,
-        'totalUnpaidCredit' => $totalUnpaidCredit
+        'totalUnpaidCredit' => $totalUnpaidCredit,
+        'cbeAccount' => getenv('CBE_ACCOUNT') ?: '',
+        'boaAccount' => getenv('BOA_ACCOUNT') ?: ''
     ]);
 } catch (PDOException $exception) {
     $respond(500, [
