@@ -69,11 +69,12 @@ try {
         ]);
     }
 
-    $ordersStmt = $db->prepare('SELECT total_price, order_time, deliver_status, unpaid_cash, unpaid_credit FROM orders WHERE customer_id = :customerId ORDER BY order_time DESC');
+    $ordersStmt = $db->prepare('SELECT id,total_price, order_time, deliver_status, unpaid_cash, unpaid_credit FROM orders WHERE customer_id = :customerId ORDER BY order_time DESC');
     $ordersStmt->execute([':customerId' => $customerId]);
     $orderRows = $ordersStmt->fetchAll();
     $orders = array_map(function (array $row): array {
         return [
+            'orderId' => $row['id'],
             'totalPrice' => $row['total_price'] !== null ? (float)$row['total_price'] : null,
             'orderTime' => $row['order_time'],
             'deliverStatus' => $row['deliver_status'] !== null ? (int)$row['deliver_status'] : null,
