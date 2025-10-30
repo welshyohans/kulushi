@@ -71,6 +71,7 @@ try {
         'SELECT
             g.name AS goods_name,
             g.image_url AS goods_image,
+            ol.id AS order_list_id,
             ol.quantity,
             COALESCE(ol.each_price, sg.price) AS unit_price,
             s.shop_name AS supplier_name,
@@ -89,6 +90,7 @@ try {
         return [
             'goodsName' => $row['goods_name'] ?? '',
             'goodsImage' => $row['goods_image'] ?? '',
+            'orderListId' => $row['order_list_id'] !== null ? (string)(int)$row['order_list_id'] : '0',
             'quantity' => $row['quantity'] !== null ? (string)(int)$row['quantity'] : '0',
             'price' => $row['unit_price'] !== null ? (string)(float)$row['unit_price'] : '0',
             'supplierName' => $row['supplier_name'] ?? '',
@@ -96,10 +98,10 @@ try {
         ];
     }, $rows);
 
-    $respond(200, [
-        'status' => 'success',
-        'list' => $items
-    ]);
+    // Return raw array (no wrapper) for the Android client
+    http_response_code(200);
+    echo json_encode($items);
+    exit;
 } catch (PDOException $exception) {
     $respond(500, [
         'status' => 'error',
