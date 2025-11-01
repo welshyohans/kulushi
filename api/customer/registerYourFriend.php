@@ -131,6 +131,17 @@ try {
 
     $newCustomerId = (int)$db->lastInsertId();
 
+    $addressInsert = $db->prepare(
+        'INSERT INTO customer_address (customer_id, address_id, address_name, is_main_address) VALUES (:customer_id, :address_id, :address_name, :is_main_address)'
+    );
+
+    $addressInsert->execute([
+        ':customer_id' => $newCustomerId,
+        ':address_id' => 2,
+        ':address_name' => 'Merkato',
+        ':is_main_address' => 1
+    ]);
+
     $db->commit();
 
     $sms = new SMS();
