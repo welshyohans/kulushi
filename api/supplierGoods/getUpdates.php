@@ -49,6 +49,16 @@ try {
     $goodsStmt->execute([':code' => $lastUpdateCode]);
     $goods = $goodsStmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $categories = [];
+    $categoryStmt = $db->prepare('SELECT id, name FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC');
+    $categoryStmt->execute([':code' => $lastUpdateCode]);
+    foreach ($categoryStmt->fetchAll(PDO::FETCH_ASSOC) as $categoryRow) {
+        $categories[] = [
+            'id' => isset($categoryRow['id']) ? (int)$categoryRow['id'] : 0,
+            'name' => isset($categoryRow['name']) ? (string)$categoryRow['name'] : '',
+        ];
+    }
+
     $supplierGoodsStmt = $db->prepare('SELECT * FROM supplier_goods WHERE supplier_id = :sid ORDER BY last_update_code ASC, id ASC');
     $supplierGoodsStmt->execute([':sid' => $supplierId]);
     $supplierGoods = $supplierGoodsStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -61,7 +71,8 @@ try {
         'requested_last_update_code' => $lastUpdateCode,
         'current_last_update_code' => $currentCode,
         'goods_updates' => $goods,
-        'supplier_goods' => $supplierGoods
+        'supplier_goods' => $supplierGoods,
+        'categories' => $categories
     ]);
 } catch (PDOException $e) {
     $response(500, ['success' => false, 'message' => 'Database error', 'error' => $e->getMessage()]);
