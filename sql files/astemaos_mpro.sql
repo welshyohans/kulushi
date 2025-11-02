@@ -83,6 +83,7 @@ CREATE TABLE `category` (
   `image_url` varchar(100) NOT NULL,
   `is_available` tinyint(1) NOT NULL DEFAULT 0,
   `last_update_code` int(11) NOT NULL,
+  `commission` int(11) NOT NULL,
   `priority` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 

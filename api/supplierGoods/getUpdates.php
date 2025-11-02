@@ -50,12 +50,13 @@ try {
     $goods = $goodsStmt->fetchAll(PDO::FETCH_ASSOC);
 
     $categories = [];
-    $categoryStmt = $db->prepare('SELECT id, name FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC');
+    $categoryStmt = $db->prepare('SELECT id, name, commission FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC');
     $categoryStmt->execute([':code' => $lastUpdateCode]);
     foreach ($categoryStmt->fetchAll(PDO::FETCH_ASSOC) as $categoryRow) {
         $categories[] = [
             'id' => isset($categoryRow['id']) ? (int)$categoryRow['id'] : 0,
             'name' => isset($categoryRow['name']) ? (string)$categoryRow['name'] : '',
+            'commission' => isset($categoryRow['commission']) ? (int)$categoryRow['commission'] : 0,
         ];
     }
 
