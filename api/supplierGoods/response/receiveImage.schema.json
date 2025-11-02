@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReceiveSupplierGoodsImageResponse",
+  "type": "object",
+  "required": [
+    "success",
+    "message",
+    "supplier_id",
+    "goods_id",
+    "image_url",
+    "last_update_code",
+    "history_id"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "message": {
+      "type": "string"
+    },
+    "supplier_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "goods_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "last_update_code": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "history_id": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "additionalProperties": true
+}
