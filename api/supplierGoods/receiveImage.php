@@ -144,16 +144,6 @@ try {
         ':sid' => (int)$supplierId
     ]);
 
-    $historyStmt = $db->prepare('INSERT INTO supplier_history (supplier_id, goods_id, action, details, image_path, created_at) VALUES (:supplier_id, :goods_id, :action, :details, :image_path, NOW())');
-    $historyStmt->execute([
-        ':supplier_id' => (int)$supplierId,
-        ':goods_id' => (int)$goodsId,
-        ':action' => 'upload_image',
-        ':details' => 'Supplier uploaded goods image',
-        ':image_path' => $imageUrl
-    ]);
-    $historyId = (int)$db->lastInsertId();
-
     $db->commit();
 
     if ($oldImageRelative && $oldImageRelative !== $imageUrl) {
@@ -172,8 +162,7 @@ try {
         'supplier_id' => (int)$supplierId,
         'goods_id' => (int)$goodsId,
         'image_url' => $imageUrl,
-        'last_update_code' => $code,
-        'history_id' => $historyId
+        'last_update_code' => $code
     ]);
 } catch (PDOException $e) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
