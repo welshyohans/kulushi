@@ -97,9 +97,10 @@ try {
     if (!$sgModel->goodsExists((int)$goodsId)) {
         $response(404, ['success' => false, 'message' => 'Goods not found', 'goods_id' => (int)$goodsId]);
     }
-    if (!$sgModel->findBySupplierAndGoods((int)$supplierId, (int)$goodsId)) {
+   
+   /* if (!$sgModel->findBySupplierAndGoods((int)$supplierId, (int)$goodsId)) {
         $response(404, ['success' => false, 'message' => 'Supplier-goods relation not found', 'supplier_id' => (int)$supplierId, 'goods_id' => (int)$goodsId]);
-    }
+    }*/
 
     $db->beginTransaction();
 
