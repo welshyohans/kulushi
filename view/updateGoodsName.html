@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Goods Name Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+        crossorigin="anonymous"
+    >
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f1f4ff 0%, #f9fbff 45%, #eef2ff 100%);
+        }
+
+        .navbar {
+            box-shadow: 0 12px 30px -18px rgba(63, 81, 181, 0.45);
+        }
+
+        .card {
+            border: none;
+            border-radius: 1.25rem;
+            box-shadow: 0 18px 40px -25px rgba(33, 37, 41, 0.35);
+        }
+
+        .page-title {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .table thead th {
+            background: #f1f3ff;
+            border-top: none;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 0.75rem;
+            color: #4a4f6a;
+        }
+
+        .table tbody tr {
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .table tbody tr:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px -26px rgba(33, 37, 41, 0.55);
+        }
+
+        .badge-pill {
+            border-radius: 999px;
+        }
+
+        #goodsSearch {
+            border-radius: 999px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3.5rem 1.5rem;
+            color: #6c757d;
+        }
+
+        .modal-content {
+            border-radius: 1.25rem;
+            box-shadow: 0 24px 50px -30px rgba(33, 37, 41, 0.5);
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg bg-white border-bottom">
+    <div class="container">
+        <span class="navbar-brand fw-semibold text-primary">
+            <i class="bi bi-boxes me-2"></i>
+            Goods Name Management
+        </span>
+        <button class="btn btn-outline-primary" id="refreshGoodsBtn">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Refresh
+        </button>
+    </div>
+</nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            <div class="card">
+                <div class="card-header bg-white border-0 pt-4 pb-3">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                        <div>
+                            <h1 class="h4 page-title mb-1">Catalogue overview</h1>
+                            <p class="text-muted mb-0">
+                                Browse the catalogue and quickly update product display names.
+                            </p>
+                        </div>
+                        <div class="flex-grow-1 flex-lg-grow-0 w-100 w-lg-auto">
+                            <label for="goodsSearch" class="form-label text-muted small mb-2">
+                                <i class="bi bi-search me-1"></i>
+                                Search goods
+                            </label>
+                            <input
+                                type="search"
+                                class="form-control"
+                                id="goodsSearch"
+                                placeholder="Search by name, ID, category, or brand"
+                            >
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="alert d-none" id="feedbackAlert" role="alert"></div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Brand</th>
+                                <th scope="col">Priority</th>
+                                <th scope="col">Last update code</th>
+                                <th scope="col">Last updated</th>
+                                <th scope="col" class="text-end">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody id="goodsTableBody">
+                            <tr>
+                                <td colspan="8" class="p-0">
+                                    <div class="empty-state" id="goodsEmptyState">
+                                        <div class="spinner-border text-primary mb-3"></div>
+                                        <p class="mb-0">Loading goods catalogue…</p>
+                                        <small class="text-muted">Hang tight, this only takes a moment.</small>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 d-flex flex-column flex-md-row justify-content-between gap-2 py-3">
+                    <small class="text-muted">
+                        <i class="bi bi-list-check me-1"></i>
+                        <span id="goodsCount">0</span> goods displayed
+                    </small>
+                    <small class="text-muted">
+                        Last refreshed: <span id="goodsLastRefresh">—</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Edit goods name modal -->
+<div class="modal fade" id="editGoodsModal" tabindex="-1" aria-labelledby="editGoodsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="editGoodsForm" novalidate>
+                <div class="modal-header border-0">
+                    <h2 class="modal-title fs-5" id="editGoodsModalLabel">
+                        <i class="bi bi-pencil-square me-2 text-primary"></i>
+                        Update goods name
+                    </h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <input type="hidden" id="editGoodsId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-muted">Current name</label>
+                        <div class="form-control-plaintext fw-semibold" id="currentGoodsName">—</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newGoodsName" class="form-label fw-semibold">New name</label>
+                        <input type="text" class="form-control" id="newGoodsName" required minlength="2">
+                        <div class="invalid-feedback">Please enter a name with at least 2 characters.</div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">Category</label>
+                            <div class="form-control-plaintext" id="editGoodsCategory">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-1">Brand</label>
+                            <div class="form-control-plaintext" id="editGoodsBrand">—</div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-4 mb-0">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        Saving will bump the global last update code and refresh the goods metadata.
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" id="editFormSpinner" role="status" aria-hidden="true"></span>
+                        <span id="editFormSubmitText">Save changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+    crossorigin="anonymous"
+></script>
+<script>
+    (function ($) {
+        'use strict';
+
+        const goodsCache = new Map();
+
+        function showAlert(type, message) {
+            const alertEl = $('#feedbackAlert');
+            alertEl.removeClass('d-none alert-success alert-danger alert-warning alert-info')
+                .addClass(`alert alert-${type}`)
+                .text(message);
+
+            setTimeout(() => alertEl.addClass('d-none'), 4000);
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) {
+                return '—';
+            }
+            const date = new Date(isoString);
+            if (Number.isNaN(date.getTime())) {
+                return isoString;
+            }
+            return date.toLocaleString();
+        }
+
+        function renderGoodsRow(goods) {
+            const badgeClass = goods.showInHome ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary';
+            const badgeText = goods.showInHome ? 'Home' : 'Hidden';
+
+            return $(`
+                <tr data-goods-id="${goods.id}">
+                    <th scope="row">#${goods.id}</th>
+                    <td>
+                        <div class="fw-semibold">${goods.name || '—'}</div>
+                        <small class="text-muted">${goods.description || ''}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary-emphasis badge-pill">${goods.categoryName || '—'}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-info-subtle text-info-emphasis badge-pill">${goods.brandName || '—'}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${badgeClass} badge-pill">
+                            <i class="bi bi-lightning-charge me-1"></i>${goods.priority ?? '—'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark">${goods.lastUpdateCode ?? '—'}</span>
+                    </td>
+                    <td>${formatDateTime(goods.lastUpdate)}</td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-primary btn-sm btn-edit-goods">
+                            <i class="bi bi-pencil-square me-1"></i>Edit name
+                        </button>
+                    </td>
+                </tr>
+            `);
+        }
+
+        function renderGoodsTable(goodsList) {
+            const tbody = $('#goodsTableBody');
+            const emptyState = $('#goodsEmptyState');
+
+            tbody.empty();
+            goodsCache.clear();
+
+            if (!Array.isArray(goodsList) || goodsList.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <i class="bi bi-box-seam display-6 d-block mb-2 text-danger"></i>
+                                <p class="mb-0">No goods found.</p>
+                                <small class="text-muted">Ensure the catalogue is populated before editing.</small>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+                $('#goodsCount').text('0');
+                return;
+            }
+
+            goodsList.forEach((goods) => {
+                goodsCache.set(goods.id, goods);
+                tbody.append(renderGoodsRow(goods));
+            });
+
+            emptyState.hide();
+            $('#goodsCount').text(String(goodsList.length));
+            $('#goodsLastRefresh').text(formatDateTime(new Date().toISOString()));
+        }
+
+        function fetchGoods() {
+            $.ajax({
+                url: '../api/getGoods.php',
+                method: 'GET',
+                dataType: 'json',
+                beforeSend() {
+                    $('#goodsTableBody').html(`
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <div class="spinner-border text-primary mb-3"></div>
+                                    <p class="mb-0">Fetching goods catalogue…</p>
+                                    <small class="text-muted">Please wait.</small>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                }
+            }).done((response) => {
+                if (response.success) {
+                    renderGoodsTable(response.goods);
+                } else {
+                    $('#goodsTableBody').html(`
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="bi bi-exclamation-triangle display-6 d-block mb-2 text-warning"></i>
+                                    <p class="mb-0">${response.message || 'Failed to load goods.'}</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                }
+            }).fail(() => {
+                $('#goodsTableBody').html(`
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <i class="bi bi-wifi-off display-6 d-block mb-2 text-danger"></i>
+                                <p class="mb-0">Unable to reach the server.</p>
+                                <small class="text-muted">Check your connection and try again.</small>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        function filterGoods(query) {
+            const normalized = query.trim().toLowerCase();
+            $('#goodsTableBody tr').each(function () {
+                const rowText = $(this).text().toLowerCase();
+                $(this).toggle(rowText.includes(normalized));
+            });
+        }
+
+        function openEditModal(goodsId) {
+            const goods = goodsCache.get(goodsId);
+            if (!goods) {
+                showAlert('danger', 'Selected goods could not be found.');
+                return;
+            }
+
+            $('#editGoodsId').val(goods.id);
+            $('#currentGoodsName').text(goods.name || '—');
+            $('#newGoodsName').val(goods.name || '');
+            $('#editGoodsCategory').text(goods.categoryName || '—');
+            $('#editGoodsBrand').text(goods.brandName || '—');
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editGoodsModal'));
+            modal.show();
+        }
+
+        function submitEditForm(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+            form.classList.remove('was-validated');
+
+            const payload = {
+                goodsId: Number($('#editGoodsId').val()),
+                name: $('#newGoodsName').val().trim()
+            };
+
+            if (!Number.isInteger(payload.goodsId) || payload.goodsId <= 0) {
+                showAlert('danger', 'Invalid goods identifier.');
+                return;
+            }
+
+            const spinner = $('#editFormSpinner');
+            const submitText = $('#editFormSubmitText');
+            spinner.removeClass('d-none');
+            submitText.text('Saving…');
+
+            $.ajax({
+                url: '../api/updateGoodsName.php',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                dataType: 'json'
+            }).done((response) => {
+                if (response.success) {
+                    showAlert('success', response.message || 'Goods name updated successfully.');
+                    const modalElement = document.getElementById('editGoodsModal');
+                    bootstrap.Modal.getInstance(modalElement)?.hide();
+                    fetchGoods();
+                } else {
+                    showAlert('warning', response.message || 'Unable to update goods name.');
+                }
+            }).fail((jqXHR) => {
+                const message = jqXHR.responseJSON?.message || 'Server error while updating goods.';
+                showAlert('danger', message);
+            }).always(() => {
+                spinner.addClass('d-none');
+                submitText.text('Save changes');
+            });
+        }
+
+        function registerEventHandlers() {
+            $('#goodsTableBody').on('click', '.btn-edit-goods', function () {
+                const goodsId = Number($(this).closest('tr').data('goods-id'));
+                if (Number.isInteger(goodsId)) {
+                    openEditModal(goodsId);
+                }
+            });
+
+            $('#goodsSearch').on('input', function () {
+                filterGoods($(this).val());
+            });
+
+            $('#refreshGoodsBtn').on('click', () => fetchGoods());
+
+            $('#editGoodsForm').on('submit', submitEditForm);
+        }
+
+        $(document).ready(() => {
+            registerEventHandlers();
+            fetchGoods();
+        });
+    })(jQuery);
+</script>
+</body>
+</html>
