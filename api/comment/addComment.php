@@ -5,9 +5,11 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 require_once '../../config/Database.php';
+require_once '../../model/Settings.php';
 
 $database = new Database();
 $conn = $database->connect();
+$settings = new Settings($conn);
 
 $input = json_decode(file_get_contents('php://input'), true);
 
@@ -46,12 +48,17 @@ try {
     $averageStar = $avgResult && $avgResult['average_star'] !== null ? (float) $avgResult['average_star'] : 0.0;
     $normalizedStar = max(0, min(5, round($averageStar, 2)));
 
+    $lastUpdateCode = $settings->nextCode();
+
     $updateStmt = $conn->prepare("
         UPDATE goods
-        SET star_value = :starValue
+        SET star_value = :starValue,
+            last_update_code = :lastUpdateCode,
+            last_update = NOW()
         WHERE id = :goodsId
     ");
     $updateStmt->bindValue(':starValue', $normalizedStar);
+    $updateStmt->bindValue(':lastUpdateCode', (int) $lastUpdateCode, PDO::PARAM_INT);
     $updateStmt->bindValue(':goodsId', $goodsId, PDO::PARAM_INT);
     $updateStmt->execute();
 
@@ -59,7 +66,8 @@ try {
 
     echo json_encode([
         'success' => 'Comment added successfully',
-        'starValue' => $normalizedStar
+        'starValue' => $normalizedStar,
+        'lastUpdateCode' => (int) $lastUpdateCode
     ]);
 } catch (PDOException $e) {
     if ($conn->inTransaction()) {

@@ -75,7 +75,7 @@ function mapGoodsRow(array $row): array {
         'imageUrl' => (string)($row['image_url'] ?? ''),
         'lastUpdateCode' => (int)($row['last_update_code'] ?? 0),
         'lastUpdate' => (string)($row['last_update'] ?? ''),
-        'starValue' => (int)($row['star_value'] ?? 0),
+        'starValue' => (double)($row['star_value'] ?? 0),
         'tiktokUrl' => (string)($row['tiktok_url'] ?? ''),
         'commission' => (int)($row['commission'] ?? 0),
     ];
