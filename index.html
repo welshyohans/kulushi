@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <title>MerKato Pro — Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
+    >
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+    <style>
+        :root {
+            --primary-color: #2b59ff;
+            --primary-variant: #1e3ec9;
+            --surface-bg: #f5f7ff;
+            --surface-gradient: radial-gradient(circle at top, #f3f6ff, #edf1ff 48%, #e7ecff 100%);
+            --border-soft: rgba(43, 89, 255, 0.12);
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--surface-gradient);
+            color: #1b2540;
+        }
+
+        .page-shell {
+            min-height: calc(100vh - 60px);
+        }
+
+        .topbar {
+            background: rgba(255, 255, 255, 0.9);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(15, 32, 98, 0.06);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+
+        .topbar .brand {
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--primary-variant);
+        }
+
+        .android-banner {
+            display: none;
+            background: var(--primary-color);
+            color: #fff;
+            padding: 0.85rem 1.2rem;
+            border-radius: 0.85rem;
+            margin-bottom: 0.85rem;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            box-shadow: 0 18px 48px -32px rgba(17, 45, 115, 0.6);
+        }
+
+        .android-banner a {
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 999px;
+            padding: 0.45rem 1.15rem;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+
+        .android-banner button {
+            color: #fff;
+            border: none;
+            background: transparent;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+        }
+
+        .side-nav {
+            position: sticky;
+            top: 96px;
+            align-self: start;
+        }
+
+        .side-nav .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.85rem;
+            font-weight: 600;
+            color: #25315b;
+            transition: all 0.2s ease;
+        }
+
+        .side-nav .nav-link.active {
+            background: linear-gradient(135deg, rgba(43, 89, 255, 0.18), rgba(43, 89, 255, 0.05));
+            color: var(--primary-variant);
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 1.15rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-soft);
+            box-shadow: 0 24px 48px -42px rgba(32, 48, 96, 0.55);
+        }
+
+        .goods-grid {
+            display: grid;
+            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        }
+
+        .goods-card {
+            border: 1px solid rgba(15, 32, 98, 0.05);
+            border-radius: 1.1rem;
+            overflow: hidden;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 18px 36px -28px rgba(17, 34, 85, 0.45);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .goods-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 22px 42px -28px rgba(17, 34, 85, 0.6);
+        }
+
+        .goods-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .goods-card .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            padding: 1rem 1.15rem 1.25rem;
+        }
+
+        .goods-card .supplier-chip {
+            background: rgba(43, 89, 255, 0.08);
+            color: var(--primary-variant);
+            border-radius: 0.75rem;
+            padding: 0.25rem 0.65rem;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .goods-card .price-tag {
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .goods-card .actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .goods-card .actions button {
+            flex: 1 1 48%;
+        }
+
+        .goods-card .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(43, 89, 255, 0.08);
+            border-radius: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            gap: 0.5rem;
+        }
+
+        .goods-card .quantity-control button {
+            border-radius: 999px;
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            font-size: 1.15rem;
+        }
+
+        .chip-scroll {
+            overflow-x: auto;
+            display: flex;
+            gap: 0.65rem;
+            padding-bottom: 0.35rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .chip {
+            border-radius: 999px;
+            padding: 0.4rem 1rem;
+            border: 1px solid rgba(43, 89, 255, 0.2);
+            background: rgba(255, 255, 255, 0.85);
+            color: #22305b;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .chip.active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .supplier-card {
+            border: 1px solid rgba(15, 32, 90, 0.04);
+            border-radius: 1rem;
+            padding: 0.85rem 1rem;
+            display: flex;
+            gap: 0.85rem;
+            align-items: center;
+            background: #fff;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .supplier-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(43, 89, 255, 0.3);
+        }
+
+        .supplier-card.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 20px 40px -30px rgba(43, 89, 255, 0.45);
+        }
+
+        .supplier-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            background: rgba(43, 89, 255, 0.12);
+            display: grid;
+            place-items: center;
+            font-size: 1.4rem;
+            color: var(--primary-variant);
+        }
+
+        .mobile-bottom-nav {
+            background: rgba(255, 255, 255, 0.96);
+            border-top: 1px solid rgba(15, 32, 90, 0.1);
+            position: sticky;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1020;
+        }
+
+        .mobile-bottom-nav .nav-link {
+            font-size: 0.8rem;
+            color: #455078;
+        }
+
+        .mobile-bottom-nav .nav-link.active {
+            color: var(--primary-variant);
+            font-weight: 600;
+        }
+
+        .toast-container {
+            z-index: 1080;
+        }
+
+        .modal-rounded .modal-content {
+            border-radius: 1.2rem;
+            border: none;
+        }
+
+        .modal-rounded .modal-header {
+            border-bottom: none;
+        }
+
+        .modal-rounded .modal-footer {
+            border-top: none;
+        }
+
+        .cart-item-card {
+            border: 1px solid rgba(15, 32, 90, 0.08);
+            border-radius: 0.95rem;
+            padding: 0.85rem 1rem;
+            display: flex;
+            gap: 0.85rem;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.96);
+        }
+
+        .cart-item-card img {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 0.75rem;
+        }
+
+        .cart-summary-card {
+            border: 1px dashed rgba(43, 89, 255, 0.45);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            background: rgba(43, 89, 255, 0.08);
+        }
+
+        .options-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .option-row {
+            border: 1px solid rgba(15, 32, 90, 0.1);
+            border-radius: 0.9rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.98);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .option-row button {
+            justify-self: end;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7498;
+        }
+
+        .skeleton {
+            display: inline-block;
+            border-radius: 0.75rem;
+            background-image: linear-gradient(90deg, rgba(200, 210, 240, 0.25), rgba(200, 210, 240, 0.45), rgba(200, 210, 240, 0.25));
+            background-size: 200% 100%;
+            animation: shimmer 1.2s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position-x: -200%; }
+            100% { background-position-x: 200%; }
+        }
+
+        @media (max-width: 991.98px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .side-nav {
+                display: none;
+            }
+
+            .topbar {
+                padding-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .goods-card img {
+                height: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar shadow-sm">
+    <div class="container py-3">
+        <div id="androidBanner" class="android-banner">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-android2 fs-4"></i>
+                <span class="fw-semibold">Download MerKato Pro App for the fastest wholesale ordering.</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="app/merkatopro.apk" id="androidBannerCta" download>Download App</a>
+                <button type="button" class="btn-close btn-close-white" id="dismissAndroidBanner" aria-label="Dismiss banner"></button>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="brand">Merkato Pro</span>
+                <span class="badge text-bg-light d-none d-lg-inline-flex">
+                    <i class="bi bi-person-check me-1"></i>
+                    <span id="customerNameBadge">Loading…</span>
+                </span>
+            </div>
+            <div class="d-none d-lg-flex flex-grow-1 align-items-center gap-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="search" class="form-control border-start-0" placeholder="Search goods…" id="globalSearchInput" aria-label="Search goods">
+                </div>
+                <button class="btn btn-outline-primary position-relative" id="cartBtn" data-bs-toggle="modal" data-bs-target="#cartModal">
+                    <i class="bi bi-cart3 me-2"></i>
+                    Cart
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cartCountBadge">0</span>
+                </button>
+            </div>
+            <div class="d-flex d-lg-none align-items-center gap-3">
+                <button class="btn btn-outline-primary position-relative" id="cartBtnMobile" data-bs-toggle="modal" data-bs-target="#cartModal" aria-label="Open cart">
+                    <i class="bi bi-cart3 fs-5"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cartCountBadgeMobile">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container py-4 page-shell">
+    <div class="layout">
+        <nav class="side-nav d-none d-lg-flex flex-column gap-1">
+            <button class="nav-link active" data-screen-target="homeScreen">
+                <i class="bi bi-house-door-fill"></i>
+                Home
+            </button>
+            <button class="nav-link" data-screen-target="categoriesScreen">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+                Categories
+            </button>
+            <button class="nav-link" data-screen-target="suppliersScreen">
+                <i class="bi bi-shop-window"></i>
+                Suppliers
+            </button>
+            <button class="nav-link" data-screen-target="profileScreen">
+                <i class="bi bi-person-bounding-box"></i>
+                Profile
+            </button>
+        </nav>
+
+        <section class="content-stack d-flex flex-column gap-4">
+            <section id="homeScreen" class="summary-card">
+                <header class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+                    <div>
+                        <h1 class="h4 fw-bold mb-1">Featured goods</h1>
+                        <p class="text-muted mb-0">Top picks prioritized by demand and best supplier prices.</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge text-bg-light">
+                            <i class="bi bi-box-seam me-1"></i>
+                            <span id="featuredGoodsCount">0</span> items
+                        </span>
+                        <button class="btn btn-outline-secondary btn-sm" id="reloadFeaturedBtn">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </header>
+
+                <div class="chip-scroll" id="homeCategoryChips" aria-label="Category quick filters"></div>
+                <div class="goods-grid" id="goodsGrid" aria-live="polite"></div>
+
+                <div class="text-center mt-4">
+                    <button class="btn btn-outline-primary px-4" id="loadMoreGoodsBtn">
+                        <i class="bi bi-arrow-down-circle me-2"></i>
+                        Load more goods
+                    </button>
+                </div>
+            </section>
+
+            <section id="categoriesScreen" class="summary-card d-none">
+                <header class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 fw-bold mb-1">Browse by category</h2>
+                        <p class="text-muted mb-0">Tap any category to explore goods stocked for your shop.</p>
+                    </div>
+                    <span class="badge text-bg-light align-self-start">
+                        <i class="bi bi-collection me-1"></i>
+                        <span id="categoryCountBadge">0</span> categories
+                    </span>
+                </header>
+                <div class="row g-3" id="categoryCardList"></div>
+            </section>
+
+            <section id="suppliersScreen" class="summary-card d-none">
+                <header class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+                    <div>
+                        <h2 class="h4 fw-bold mb-1">Suppliers</h2>
+                        <p class="text-muted mb-0">Explore suppliers to see their best performing goods.</p>
+                    </div>
+                    <div class="input-group input-group-sm w-auto">
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="search" class="form-control border-start-0" id="supplierSearchInput" placeholder="Search suppliers">
+                    </div>
+                </header>
+                <div class="row g-3" id="supplierList"></div>
+            </section>
+
+            <section id="profileScreen" class="summary-card d-none">
+                <header class="d-flex align-items-center justify-content-between mb-4">
+                    <div>
+                        <h2 class="h4 fw-bold mb-1">Your profile</h2>
+                        <p class="text-muted mb-0">Keep your shop information up to date for accurate deliveries.</p>
+                    </div>
+                    <button class="btn btn-outline-danger" id="logoutBtn">
+                        <i class="bi bi-box-arrow-right me-2"></i>
+                        Logout
+                    </button>
+                </header>
+
+                <div class="row g-3" id="profileInfoGrid"></div>
+            </section>
+        </section>
+    </div>
+</main>
+
+<nav class="mobile-bottom-nav border-top d-lg-none">
+    <div class="container">
+        <div class="nav d-flex justify-content-around text-center py-2">
+            <button class="nav-link active" data-screen-target="homeScreen">
+                <i class="bi bi-house-door-fill d-block fs-5"></i>
+                Home
+            </button>
+            <button class="nav-link" data-screen-target="categoriesScreen">
+                <i class="bi bi-grid-3x3-gap-fill d-block fs-5"></i>
+                Category
+            </button>
+            <button class="nav-link" data-screen-target="suppliersScreen">
+                <i class="bi bi-shop-window d-block fs-5"></i>
+                Suppliers
+            </button>
+            <button class="nav-link" data-screen-target="profileScreen">
+                <i class="bi bi-person-bounding-box d-block fs-5"></i>
+                Profile
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- Cart Modal -->
+<div class="modal modal-rounded fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5 text-primary" id="cartModalLabel">
+                    <i class="bi bi-cart3 me-2"></i>
+                    Your cart
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close cart"></button>
+            </div>
+            <div class="modal-body">
+                <div id="cartItemsContainer" class="d-flex flex-column gap-3"></div>
+                <div class="cart-summary-card mt-4" id="cartSummaryCard">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold text-muted">Items</span>
+                        <span class="fw-semibold" id="cartSummaryItems">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold text-muted">Total quantity</span>
+                        <span class="fw-semibold" id="cartSummaryQuantity">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold text-muted">Total amount</span>
+                        <span class="fw-bold fs-5 text-primary" id="cartSummaryAmount">ETB 0.00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button class="btn btn-outline-secondary" id="clearCartBtn">
+                    <i class="bi bi-trash3 me-2"></i>
+                    Clear cart
+                </button>
+                <button class="btn btn-primary" id="placeOrderBtn">
+                    <i class="bi bi-bag-check me-2"></i>
+                    Place order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Options Modal -->
+<div class="modal modal-rounded fade" id="optionsModal" tabindex="-1" aria-labelledby="optionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5 text-primary" id="optionsModalLabel">Supplier options</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close options"></button>
+            </div>
+            <div class="modal-body">
+                <div class="options-list" id="optionsList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Goods Detail Modal -->
+<div class="modal modal-rounded fade" id="goodsDetailModal" tabindex="-1" aria-labelledby="goodsDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5 text-primary" id="goodsDetailModalLabel">Goods details</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close details"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4 align-items-start">
+                    <div class="col-md-5">
+                        <div class="ratio ratio-1x1 rounded-3 overflow-hidden border">
+                            <img id="detailImage" src="" alt="Goods preview" class="w-100 h-100 object-fit-cover" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="col-md-7 d-flex flex-column gap-3">
+                        <div>
+                            <h3 class="h4 fw-bold" id="detailName"></h3>
+                            <span class="badge text-bg-light" id="detailCategory">Category</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-primary fw-bold fs-5" id="detailPrice">ETB 0.00</span>
+                            <span class="supplier-chip" id="detailSupplier">
+                                <i class="bi bi-shop"></i>
+                                Supplier
+                            </span>
+                        </div>
+                        <div>
+                            <h4 class="h6 text-muted text-uppercase mb-2">Description</h4>
+                            <div class="text-muted" id="detailDescription" style="max-height: 180px; overflow-y: auto;"></div>
+                        </div>
+                        <div>
+                            <h4 class="h6 text-muted text-uppercase mb-2">Comments</h4>
+                            <div class="border rounded-3 p-3" style="max-height: 220px; overflow-y: auto;" id="detailComments">
+                                <div class="text-center text-muted small">Loading comments…</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="detailAddToCartBtn" data-goods-id="">
+                            <i class="bi bi-cart-plus me-2"></i>
+                            Add to cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Android reminder modal -->
+<div class="modal fade modal-rounded" id="androidDownloadModal" tabindex="-1" aria-labelledby="androidDownloadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5 text-primary" id="androidDownloadModalLabel">
+                    <i class="bi bi-android2 me-2"></i>
+                    Install Merkato Pro App
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close reminder"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-0">
+                    Enjoy instant supplier updates, offline catalogues, and background order tracking with the Android app.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Later</button>
+                <a href="app/merkatopro.apk" class="btn btn-primary" download>
+                    <i class="bi bi-download me-2"></i>
+                    Download
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"
+></script>
+<script type="module">
+    const sessionKey = 'mproSession';
+    const cartKey = 'mproCartItems';
+    const androidBannerKey = 'mproAndroidBannerDismissed';
+    const androidModalKey = 'mproAndroidModalDismissed';
+
+    const API = {
+        featuredGoods: 'api/dashboard/getFeaturedGoods.php',
+        goodsByCategory: (categoryId, offset = 0, limit = 20) => `api/dashboard/getGoodsByCategory.php?categoryId=${encodeURIComponent(categoryId)}&offset=${offset}&limit=${limit}`,
+        goodsBySupplier: (supplierId) => `api/dashboard/getGoodsBySupplier.php?supplierId=${encodeURIComponent(supplierId)}`,
+        supplierOptions: (goodsId) => `api/dashboard/getSupplierGoodsOptions.php?goodsId=${encodeURIComponent(goodsId)}`,
+        categories: 'api/dashboard/getCategories.php',
+        suppliers: 'api/dashboard/getSuppliers.php',
+        profile: 'api/customer/profile.php',
+        comments: 'api/comment/getComments.php',
+        orderFromCart: 'api/order/createFromCart.php'
+    };
+
+    const elements = {
+        androidBanner: document.getElementById('androidBanner'),
+        dismissAndroidBanner: document.getElementById('dismissAndroidBanner'),
+        globalSearchInput: document.getElementById('globalSearchInput'),
+        goodsGrid: document.getElementById('goodsGrid'),
+        featuredGoodsCount: document.getElementById('featuredGoodsCount'),
+        reloadFeaturedBtn: document.getElementById('reloadFeaturedBtn'),
+        loadMoreGoodsBtn: document.getElementById('loadMoreGoodsBtn'),
+        homeCategoryChips: document.getElementById('homeCategoryChips'),
+        categoryCardList: document.getElementById('categoryCardList'),
+        categoryCountBadge: document.getElementById('categoryCountBadge'),
+        supplierList: document.getElementById('supplierList'),
+        supplierSearchInput: document.getElementById('supplierSearchInput'),
+        profileInfoGrid: document.getElementById('profileInfoGrid'),
+        customerNameBadge: document.getElementById('customerNameBadge'),
+        cartItemsContainer: document.getElementById('cartItemsContainer'),
+        cartSummaryItems: document.getElementById('cartSummaryItems'),
+        cartSummaryQuantity: document.getElementById('cartSummaryQuantity'),
+        cartSummaryAmount: document.getElementById('cartSummaryAmount'),
+        cartCountBadge: document.getElementById('cartCountBadge'),
+        cartCountBadgeMobile: document.getElementById('cartCountBadgeMobile'),
+        clearCartBtn: document.getElementById('clearCartBtn'),
+        placeOrderBtn: document.getElementById('placeOrderBtn'),
+        toastContainer: document.getElementById('toastContainer'),
+        navButtons: document.querySelectorAll('[data-screen-target]'),
+        screens: {
+            homeScreen: document.getElementById('homeScreen'),
+            categoriesScreen: document.getElementById('categoriesScreen'),
+            suppliersScreen: document.getElementById('suppliersScreen'),
+            profileScreen: document.getElementById('profileScreen')
+        },
+        logoutBtn: document.getElementById('logoutBtn'),
+        detailModal: document.getElementById('goodsDetailModal'),
+        detailImage: document.getElementById('detailImage'),
+        detailName: document.getElementById('detailName'),
+        detailCategory: document.getElementById('detailCategory'),
+        detailPrice: document.getElementById('detailPrice'),
+        detailSupplier: document.getElementById('detailSupplier'),
+        detailDescription: document.getElementById('detailDescription'),
+        detailComments: document.getElementById('detailComments'),
+        detailAddToCartBtn: document.getElementById('detailAddToCartBtn'),
+        optionsList: document.getElementById('optionsList'),
+        optionsModalLabel: document.getElementById('optionsModalLabel'),
+        androidDownloadModal: document.getElementById('androidDownloadModal')
+    };
+
+    const state = {
+        session: null,
+        goods: [],
+        filteredGoods: [],
+        categories: [],
+        suppliers: [],
+        profile: null,
+        pagination: {
+            featuredOffset: 0,
+            limit: 20,
+            totalFetched: 0
+        },
+        activeCategoryId: null,
+        activeSupplierId: null,
+        cart: loadCart()
+    };
+
+    let optionsModalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('optionsModal'));
+    let detailModalInstance = bootstrap.Modal.getOrCreateInstance(elements.detailModal);
+    let androidModalInstance = null;
+
+    function sessionOrRedirect() {
+        try {
+            const raw = localStorage.getItem(sessionKey);
+            if (!raw) {
+                window.location.href = 'login.html';
+                return null;
+            }
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed.customerId !== 'number' || parsed.customerId <= 0) {
+                localStorage.removeItem(sessionKey);
+                window.location.href = 'login.html';
+                return null;
+            }
+            return parsed;
+        } catch (err) {
+            console.error('Failed to parse session, redirecting', err);
+            localStorage.removeItem(sessionKey);
+            window.location.href = 'login.html';
+            return null;
+        }
+    }
+
+    function loadCart() {
+        try {
+            const raw = localStorage.getItem(cartKey);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(item => typeof item === 'object' && item !== null);
+        } catch (err) {
+            console.warn('Failed to parse cart, resetting', err);
+            return [];
+        }
+    }
+
+    function persistCart() {
+        localStorage.setItem(cartKey, JSON.stringify(state.cart));
+        renderCartCounter();
+    }
+
+    function isAndroid() {
+        return /Android/i.test(navigator.userAgent || '');
+    }
+
+    function dismissAndroidBanner() {
+        elements.androidBanner.style.display = 'none';
+        localStorage.setItem(androidBannerKey, '1');
+    }
+
+    function showAndroidBannerIfNeeded() {
+        if (!isAndroid()) return;
+        if (localStorage.getItem(androidBannerKey)) return;
+        elements.androidBanner.style.display = 'flex';
+    }
+
+    function showAndroidModalIfNeeded() {
+        if (!isAndroid()) return;
+        if (localStorage.getItem(androidModalKey)) return;
+        androidModalInstance = bootstrap.Modal.getOrCreateInstance(elements.androidDownloadModal, { backdrop: 'static' });
+        setTimeout(() => androidModalInstance.show(), 1200);
+    }
+
+    function handleAndroidModalHidden() {
+        localStorage.setItem(androidModalKey, '1');
+    }
+
+    function fetchJson(url, options = {}) {
+        return fetch(url, options).then(async (response) => {
+            if (!response.ok) {
+                const payload = await response.json().catch(() => ({}));
+                throw new Error(payload.message || `Request failed with status ${response.status}`);
+            }
+            return response.json();
+        });
+    }
+
+    async function fetchProfile() {
+        const payload = await fetchJson(API.profile, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customerId: state.session.customerId })
+        });
+        if (!payload.success || !payload.profile) {
+            throw new Error(payload.message || 'Profile not available');
+        }
+        state.profile = payload.profile;
+        renderProfile();
+        elements.customerNameBadge.textContent = payload.profile.name || 'Retailer';
+    }
+
+    function renderProfile() {
+        if (!state.profile) return;
+        const profile = state.profile;
+        elements.profileInfoGrid.innerHTML = `
+            <div class="col-12 col-lg-6">
+                <div class="border rounded-4 p-3 bg-white">
+                    <h3 class="h6 text-muted text-uppercase mb-2">Account</h3>
+                    <p class="mb-1"><strong>Name:</strong> ${profile.name || '—'}</p>
+                    <p class="mb-1"><strong>Phone:</strong> ${profile.phone || '—'}</p>
+                    <p class="mb-1"><strong>Shop name:</strong> ${profile.shopName || '—'}</p>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="border rounded-4 p-3 bg-white">
+                    <h3 class="h6 text-muted text-uppercase mb-2">Location</h3>
+                    <p class="mb-1"><strong>City:</strong> ${profile.address?.city || '—'}</p>
+                    <p class="mb-1"><strong>Area:</strong> ${profile.address?.subCity || '—'}</p>
+                    <p class="mb-1"><strong>Specific:</strong> ${profile.specificAddress || '—'}</p>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="border rounded-4 p-3 bg-white">
+                    <h3 class="h6 text-muted text-uppercase mb-2">Delivery info</h3>
+                    <p class="mb-0 text-muted">${profile.deliveryInfo || 'Delivery details will appear here.'}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    async function fetchInitialData() {
+        showSkeletonGoods();
+        const [featured, categories, suppliers] = await Promise.all([
+            fetchJson(`${API.featuredGoods}?offset=${state.pagination.featuredOffset}&limit=${state.pagination.limit}`),
+            fetchJson(API.categories),
+            fetchJson(API.suppliers)
+        ]);
+
+        state.goods = featured.goods || [];
+        state.filteredGoods = [...state.goods];
+        state.pagination.totalFetched = state.goods.length;
+        renderGoods();
+
+        state.categories = (categories.categories || []).filter(cat => Number(cat.isAvailable) === 1);
+        renderCategories();
+
+        state.suppliers = (suppliers.suppliers || []).filter(sup => Number(sup.isVisible) === 1);
+        renderSuppliers();
+    }
+
+    function renderCategories() {
+        elements.categoryCountBadge.textContent = state.categories.length.toString();
+        elements.homeCategoryChips.innerHTML = '';
+        const allChip = createChipElement({ id: null, name: 'All categories' }, state.activeCategoryId === null, () => {
+            state.activeCategoryId = null;
+            state.activeSupplierId = null;
+            state.filteredGoods = [...state.goods];
+            highlightActiveChips();
+            renderGoods();
+        });
+        elements.homeCategoryChips.appendChild(allChip);
+
+        state.categories.forEach(category => {
+            const chip = createChipElement(category, state.activeCategoryId === category.id, () => {
+                state.activeCategoryId = category.id;
+                state.activeSupplierId = null;
+                filterGoods();
+            });
+            elements.homeCategoryChips.appendChild(chip);
+        });
+
+        elements.categoryCardList.innerHTML = state.categories.map(category => `
+            <div class="col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden category-card" data-category-id="${category.id}">
+                    <div class="ratio ratio-16x9 bg-light">
+                        <img src="${category.imageUrl || 'https://via.placeholder.com/400x225'}" class="object-fit-cover" loading="lazy" alt="${category.name || 'Category'}">
+                    </div>
+                    <div class="card-body">
+                        <h3 class="h5 fw-semibold">${category.name || 'Category'}</h3>
+                        <p class="text-muted small mb-0">Tap to view goods in this category.</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function createChipElement(category, isActive, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `chip ${isActive ? 'active' : ''}`;
+        btn.textContent = category.name || 'Unknown';
+        btn.addEventListener('click', () => {
+            onClick();
+            highlightActiveChips();
+        });
+        btn.dataset.categoryId = category.id ?? 'all';
+        return btn;
+    }
+
+    function highlightActiveChips() {
+        const chips = elements.homeCategoryChips.querySelectorAll('.chip');
+        chips.forEach(chip => {
+            const chipCategoryId = chip.dataset.categoryId;
+            if (state.activeCategoryId === null && chipCategoryId === 'all') {
+                chip.classList.add('active');
+            } else if (Number(chipCategoryId) === state.activeCategoryId) {
+                chip.classList.add('active');
+            } else {
+                chip.classList.remove('active');
+            }
+        });
+    }
+
+    function renderSuppliers() {
+        elements.supplierList.innerHTML = state.suppliers.map(supplier => `
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="supplier-card" data-supplier-id="${supplier.shopId}" data-shop-type="${supplier.shopType}">
+                    <div class="supplier-avatar">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">${supplier.shopName || 'Supplier'}</div>
+                        <div class="text-muted small">${supplier.shopType || 'Unknown type'}</div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge text-bg-light">
+                            Priority ${supplier.priority ?? 0}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderGoods() {
+        elements.featuredGoodsCount.textContent = state.filteredGoods.length.toString();
+        if (state.filteredGoods.length === 0) {
+            elements.goodsGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-shop-window display-6 d-block mb-3"></i>
+                    <p class="mb-0">No goods found for the selected filter.</p>
+                    <small class="text-muted">Try another category or supplier filter.</small>
+                </div>
+            `;
+            return;
+        }
+
+        elements.goodsGrid.innerHTML = state.filteredGoods.map(goods => {
+            const cartItem = state.cart.find(item => item.goodsId === goods.goodsId && item.supplierGoodsId === goods.primarySupplier?.supplierGoodsId);
+            const canAdd = !goods.primarySupplier || goods.primarySupplier.shopType?.toLowerCase() !== 'self-delivered';
+            const hasCart = Boolean(cartItem);
+            const quantity = cartItem?.quantity ?? goods.primarySupplier?.minOrder ?? 1;
+            const price = goods.primarySupplier?.price ?? goods.lowestPrice ?? 0;
+            const minOrder = goods.primarySupplier?.minOrder ?? 1;
+
+            return `
+                <article class="goods-card" data-goods-id="${goods.goodsId}">
+                    <button class="border-0 bg-transparent p-0" data-action="open-detail" aria-label="View details of ${goods.name}">
+                        <img src="${goods.imageUrl || 'https://via.placeholder.com/400'}" alt="${goods.name || 'Goods'}" loading="lazy">
+                    </button>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h3 class="h5 fw-semibold mb-0">${goods.name || 'Goods'}</h3>
+                            <span class="badge text-bg-light">${goods.categoryName || 'Category'}</span>
+                        </div>
+                        <div class="supplier-chip">
+                            <i class="bi bi-shop"></i>
+                            ${goods.primarySupplier?.shopName || goods.supplierName || 'Supplier'}
+                        </div>
+                        <div class="price-tag text-primary">ETB ${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div class="text-muted small">
+                            Priority ${goods.priority ?? 0} &bull; Min order ${minOrder}
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-outline-primary btn-sm" data-action="see-options" data-goods-id="${goods.goodsId}">
+                                <i class="bi bi-list-ul me-1"></i>
+                                See options
+                            </button>
+                            ${canAdd ? renderAddToCartControl(goods.goodsId, goods.primarySupplier?.supplierGoodsId, hasCart, quantity, minOrder) : `
+                                <button class="btn btn-outline-secondary btn-sm w-100" data-action="self-delivered-warning">
+                                    <i class="bi bi-geo-alt-fill me-1"></i>
+                                    Visit shop
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function renderAddToCartControl(goodsId, supplierGoodsId, hasCart, quantity, minOrder) {
+        if (!hasCart) {
+            return `
+                <button class="btn btn-primary btn-sm" data-action="add-to-cart" data-goods-id="${goodsId}" data-supplier-goods-id="${supplierGoodsId}">
+                    <i class="bi bi-cart-plus me-1"></i>
+                    Add to cart
+                </button>
+            `;
+        }
+        return `
+            <div class="quantity-control w-100" data-goods-id="${goodsId}" data-supplier-goods-id="${supplierGoodsId}">
+                <button class="btn btn-primary btn-sm" data-action="decrease-qty" aria-label="Decrease quantity">
+                    <i class="bi bi-dash-lg"></i>
+                </button>
+                <div class="text-center flex-grow-1">
+                    <div class="fw-semibold">${quantity}</div>
+                    <small class="text-muted">Min ${minOrder}</small>
+                </div>
+                <button class="btn btn-primary btn-sm" data-action="increase-qty" aria-label="Increase quantity">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    function showSkeletonGoods() {
+        elements.goodsGrid.innerHTML = Array.from({ length: 6 }).map(() => `
+            <div class="goods-card">
+                <div class="skeleton" style="width: 100%; height: 180px;"></div>
+                <div class="card-body">
+                    <div class="skeleton" style="width: 60%; height: 16px;"></div>
+                    <div class="skeleton" style="width: 40%; height: 14px;"></div>
+                    <div class="skeleton" style="width: 80%; height: 18px;"></div>
+                    <div class="skeleton" style="width: 50%; height: 32px;"></div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function filterGoods() {
+        if (state.activeCategoryId !== null) {
+            state.filteredGoods = state.goods.filter(g => Number(g.categoryId) === Number(state.activeCategoryId));
+        } else if (state.activeSupplierId !== null) {
+            state.filteredGoods = state.goods.filter(g => Number(g.primarySupplier?.shopId) === Number(state.activeSupplierId));
+        } else {
+            state.filteredGoods = [...state.goods];
+        }
+        renderGoods();
+    }
+
+    function showToast({ title = 'Notification', body = '', variant = 'primary' }) {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `
+            <div class="toast align-items-center border-0 text-white bg-${variant}" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <strong class="d-block">${title}</strong>
+                        <div>${body}</div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        const toastEl = wrapper.firstElementChild;
+        elements.toastContainer.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+        toast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    }
+
+    function renderCartCounter() {
+        const totalItems = state.cart.length;
+        const totalQuantity = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+        elements.cartCountBadge.textContent = totalItems.toString();
+        elements.cartCountBadgeMobile.textContent = totalItems.toString();
+        elements.cartCountBadge.classList.toggle('d-none', totalItems === 0);
+        elements.cartCountBadgeMobile.classList.toggle('d-none', totalItems === 0);
+
+        elements.cartSummaryItems.textContent = totalItems.toString();
+        elements.cartSummaryQuantity.textContent = totalQuantity.toString();
+        const totalAmount = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        elements.cartSummaryAmount.textContent = `ETB ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    }
+
+    function renderCartModal() {
+        if (state.cart.length === 0) {
+            elements.cartItemsContainer.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-cart-x display-6 d-block mb-3"></i>
+                    <p class="mb-0">Your cart is empty.</p>
+                    <small class="text-muted">Add goods from the catalogue to place an order.</small>
+                </div>
+            `;
+            renderCartCounter();
+            return;
+        }
+
+        elements.cartItemsContainer.innerHTML = state.cart.map(item => `
+            <div class="cart-item-card" data-goods-id="${item.goodsId}" data-supplier-goods-id="${item.supplierGoodsId}">
+                <img src="${item.imageUrl || 'https://via.placeholder.com/120'}" alt="${item.name || 'Goods'}" loading="lazy">
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${item.name || 'Goods'}</div>
+                    <div class="text-muted small">${item.supplierName || 'Supplier'} &bull; Min ${item.minOrder}</div>
+                    <div class="text-primary fw-semibold">ETB ${item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div class="d-flex flex-column align-items-end gap-2">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-primary" data-action="decrease-qty">
+                            <i class="bi bi-dash-lg"></i>
+                        </button>
+                        <button class="btn btn-light" disabled>${item.quantity}</button>
+                        <button class="btn btn-outline-primary" data-action="increase-qty">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm" data-action="remove-item">
+                        <i class="bi bi-trash3 me-1"></i>
+                        Remove
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        renderCartCounter();
+    }
+
+    function addToCart(goods, supplierOffer) {
+        if (!supplierOffer) {
+            showToast({ title: 'Unavailable', body: 'No supplier information found for this goods.', variant: 'warning' });
+            return;
+        }
+
+        if ((supplierOffer.shopType || '').toLowerCase() === 'self-delivered') {
+            showToast({ title: 'Visit supplier', body: 'Self-delivered goods must be purchased directly from the supplier.', variant: 'warning' });
+            return;
+        }
+
+        const existing = state.cart.find(item => item.goodsId === goods.goodsId && item.supplierGoodsId === supplierOffer.supplierGoodsId);
+        if (existing) {
+            existing.quantity = Math.max(existing.quantity + supplierOffer.minOrder, supplierOffer.minOrder);
+        } else {
+            state.cart.push({
+                goodsId: goods.goodsId,
+                supplierGoodsId: supplierOffer.supplierGoodsId,
+                name: goods.name,
+                imageUrl: goods.imageUrl,
+                price: Number(supplierOffer.price) || 0,
+                quantity: Number(supplierOffer.minOrder) || 1,
+                minOrder: Number(supplierOffer.minOrder) || 1,
+                supplierName: supplierOffer.shopName || goods.supplierName,
+                supplierType: supplierOffer.shopType || '',
+                supplierPhone: supplierOffer.phone || ''
+            });
+        }
+
+        persistCart();
+        renderGoods();
+        renderCartCounter();
+        showToast({
+            title: 'Added to cart',
+            body: `${goods.name} from ${supplierOffer.shopName} added to cart.`,
+            variant: 'success'
+        });
+    }
+
+    function updateCartQuantity(goodsId, supplierGoodsId, delta) {
+        const item = state.cart.find(cartItem => cartItem.goodsId === goodsId && cartItem.supplierGoodsId === supplierGoodsId);
+        if (!item) return;
+
+        const newQuantity = item.quantity + delta;
+        if (newQuantity < item.minOrder) {
+            showToast({ title: 'Minimum order', body: `Minimum order is ${item.minOrder}.`, variant: 'warning' });
+            return;
+        }
+        item.quantity = newQuantity;
+        persistCart();
+        renderGoods();
+        renderCartModal();
+    }
+
+    function removeCartItem(goodsId, supplierGoodsId) {
+        state.cart = state.cart.filter(item => !(item.goodsId === goodsId && item.supplierGoodsId === supplierGoodsId));
+        persistCart();
+        renderGoods();
+        renderCartModal();
+    }
+
+    function clearCart() {
+        if (state.cart.length === 0) return;
+        state.cart = [];
+        persistCart();
+        renderGoods();
+        renderCartModal();
+    }
+
+    async function handlePlaceOrder() {
+        if (state.cart.length === 0) {
+            showToast({ title: 'Cart empty', body: 'Add goods before placing an order.', variant: 'warning' });
+            return;
+        }
+        try {
+            elements.placeOrderBtn.disabled = true;
+            elements.placeOrderBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting…';
+            const payload = {
+                customerId: state.session.customerId,
+                items: state.cart.map(item => ({
+                    supplierGoodsId: item.supplierGoodsId,
+                    goodsId: item.goodsId,
+                    quantity: item.quantity
+                }))
+            };
+            const response = await fetchJson(API.orderFromCart, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            showToast({ title: 'Order placed', body: response.message || 'Your order has been submitted to the team.', variant: 'success' });
+            clearCart();
+            bootstrap.Modal.getInstance(document.getElementById('cartModal')).hide();
+        } catch (error) {
+            console.error('Order error', error);
+            showToast({ title: 'Order failed', body: error.message || 'Could not submit order. Try again later.', variant: 'danger' });
+        } finally {
+            elements.placeOrderBtn.disabled = false;
+            elements.placeOrderBtn.innerHTML = '<i class="bi bi-bag-check me-2"></i>Place order';
+        }
+    }
+
+    async function loadMoreFeatured() {
+        state.pagination.featuredOffset += state.pagination.limit;
+        try {
+            const result = await fetchJson(`${API.featuredGoods}?offset=${state.pagination.featuredOffset}&limit=${state.pagination.limit}`);
+            const newGoods = result.goods || [];
+            if (newGoods.length === 0) {
+                showToast({ title: 'All caught up', body: 'No more goods to display yet.', variant: 'info' });
+                return;
+            }
+            state.goods.push(...newGoods);
+            filterGoods();
+        } catch (err) {
+            console.error('Failed to load more goods', err);
+            showToast({ title: 'Load failed', body: err.message, variant: 'danger' });
+        }
+    }
+
+    function attachEventListeners() {
+        elements.dismissAndroidBanner.addEventListener('click', dismissAndroidBanner);
+        elements.androidDownloadModal.addEventListener('hidden.bs.modal', handleAndroidModalHidden);
+
+        elements.navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const target = button.dataset.screenTarget;
+                switchScreen(target);
+                elements.navButtons.forEach(btn => btn.classList.toggle('active', btn === button));
+            });
+        });
+
+        elements.categoryCardList.addEventListener('click', event => {
+            const card = event.target.closest('.category-card');
+            if (!card) return;
+            const categoryId = Number(card.dataset.categoryId);
+            state.activeCategoryId = categoryId;
+            state.activeSupplierId = null;
+            filterGoods();
+            switchScreen('homeScreen');
+            highlightActiveChips();
+        });
+
+        elements.supplierList.addEventListener('click', event => {
+            const card = event.target.closest('.supplier-card');
+            if (!card) return;
+            const supplierId = Number(card.dataset.supplierId);
+            state.activeSupplierId = supplierId;
+            state.activeCategoryId = null;
+            highlightActiveChips();
+            filterGoods();
+            switchScreen('homeScreen');
+        });
+
+        elements.goodsGrid.addEventListener('click', async (event) => {
+            const actionButton = event.target.closest('[data-action]');
+            if (!actionButton) return;
+            const action = actionButton.dataset.action;
+            const goodsCard = actionButton.closest('.goods-card');
+            if (!goodsCard) return;
+            const goodsId = Number(actionButton.dataset.goodsId || goodsCard.dataset.goodsId);
+            const goods = state.goods.find(g => Number(g.goodsId) === goodsId);
+            if (!goods) return;
+
+            if (action === 'self-delivered-warning') {
+                showToast({ title: 'Visit supplier', body: 'Self-delivered goods must be collected at the supplier shop.', variant: 'warning' });
+                return;
+            }
+
+            if (action === 'open-detail') {
+                openGoodsDetail(goods);
+                return;
+            }
+
+            if (action === 'see-options') {
+                openOptionsModal(goods);
+                return;
+            }
+
+            const supplierGoodsId = Number(actionButton.dataset.supplierGoodsId || goods.primarySupplier?.supplierGoodsId);
+            const supplierOffer = goods.primarySupplier && Number(goods.primarySupplier.supplierGoodsId) === supplierGoodsId
+                ? goods.primarySupplier
+                : (goods.supplierOffers || []).find(offer => Number(offer.supplierGoodsId) === supplierGoodsId);
+
+            if (action === 'add-to-cart') {
+                addToCart(goods, supplierOffer || goods.primarySupplier);
+                renderCartModal();
+                return;
+            }
+
+            if (action === 'increase-qty') {
+                updateCartQuantity(goodsId, supplierGoodsId, supplierOffer?.minOrder || 1);
+                return;
+            }
+
+            if (action === 'decrease-qty') {
+                updateCartQuantity(goodsId, supplierGoodsId, -(supplierOffer?.minOrder || 1));
+                return;
+            }
+        });
+
+        elements.cartItemsContainer.addEventListener('click', (event) => {
+            const actionButton = event.target.closest('[data-action]');
+            if (!actionButton) return;
+            const card = actionButton.closest('.cart-item-card');
+            if (!card) return;
+            const goodsId = Number(card.dataset.goodsId);
+            const supplierGoodsId = Number(card.dataset.supplierGoodsId);
+            const action = actionButton.dataset.action;
+
+            if (action === 'decrease-qty') {
+                const item = state.cart.find(i => i.goodsId === goodsId && i.supplierGoodsId === supplierGoodsId);
+                updateCartQuantity(goodsId, supplierGoodsId, -Math.max(1, item?.minOrder || 1));
+            } else if (action === 'increase-qty') {
+                const item = state.cart.find(i => i.goodsId === goodsId && i.supplierGoodsId === supplierGoodsId);
+                updateCartQuantity(goodsId, supplierGoodsId, Math.max(1, item?.minOrder || 1));
+            } else if (action === 'remove-item') {
+                removeCartItem(goodsId, supplierGoodsId);
+            }
+        });
+
+        elements.clearCartBtn.addEventListener('click', () => {
+            if (state.cart.length === 0) return;
+            clearCart();
+            showToast({ title: 'Cart cleared', body: 'All items removed from cart.', variant: 'info' });
+        });
+
+        elements.placeOrderBtn.addEventListener('click', handlePlaceOrder);
+
+        document.getElementById('cartModal').addEventListener('shown.bs.modal', () => {
+            renderCartModal();
+        });
+
+        elements.reloadFeaturedBtn.addEventListener('click', async () => {
+            try {
+                state.pagination.featuredOffset = 0;
+                await fetchInitialData();
+                showToast({ title: 'Refreshed', body: 'Latest goods have been loaded.', variant: 'success' });
+            } catch (err) {
+                showToast({ title: 'Refresh failed', body: err.message, variant: 'danger' });
+            }
+        });
+
+        elements.loadMoreGoodsBtn.addEventListener('click', loadMoreFeatured);
+
+        elements.globalSearchInput?.addEventListener('input', (event) => {
+            const query = event.target.value.trim().toLowerCase();
+            if (!query) {
+                filterGoods();
+                return;
+            }
+            state.filteredGoods = state.goods.filter(goods =>
+                goods.name?.toLowerCase().includes(query) ||
+                goods.categoryName?.toLowerCase().includes(query) ||
+                goods.primarySupplier?.shopName?.toLowerCase().includes(query)
+            );
+            renderGoods();
+        });
+
+        elements.supplierSearchInput?.addEventListener('input', (event) => {
+            const query = event.target.value.trim().toLowerCase();
+            const cards = elements.supplierList.querySelectorAll('.supplier-card');
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.parentElement.classList.toggle('d-none', !text.includes(query));
+            });
+        });
+
+        elements.logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem(sessionKey);
+            window.location.href = 'login.html';
+        });
+
+        elements.detailAddToCartBtn.addEventListener('click', () => {
+            const goodsId = Number(elements.detailAddToCartBtn.dataset.goodsId);
+            const goods = state.goods.find(g => Number(g.goodsId) === goodsId);
+            if (!goods) return;
+            addToCart(goods, goods.primarySupplier);
+            renderCartModal();
+            detailModalInstance.hide();
+        });
+
+        document.getElementById('optionsModal').addEventListener('hidden.bs.modal', () => {
+            elements.optionsList.innerHTML = '';
+        });
+    }
+
+    function switchScreen(targetId) {
+        Object.entries(elements.screens).forEach(([id, section]) => {
+            section.classList.toggle('d-none', id !== targetId);
+        });
+    }
+
+    async function openGoodsDetail(goods) {
+        elements.detailImage.src = goods.imageUrl || 'https://via.placeholder.com/600';
+        elements.detailImage.alt = goods.name || 'Goods';
+        elements.detailName.textContent = goods.name || 'Goods';
+        elements.detailCategory.textContent = goods.categoryName || 'Category';
+        const price = goods.primarySupplier?.price ?? goods.lowestPrice ?? 0;
+        elements.detailPrice.textContent = `ETB ${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        elements.detailSupplier.innerHTML = `<i class="bi bi-shop"></i>${goods.primarySupplier?.shopName || goods.supplierName || 'Supplier'}`;
+        elements.detailDescription.innerHTML = goods.description || '<span class="text-muted">No description provided.</span>';
+        elements.detailAddToCartBtn.dataset.goodsId = goods.goodsId;
+
+        elements.detailComments.innerHTML = '<div class="text-center text-muted small">Loading comments…</div>';
+        detailModalInstance.show();
+
+        try {
+            const comments = await fetchJson(API.comments, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ goodsId: goods.goodsId })
+            });
+            if (!Array.isArray(comments) || comments.length === 0) {
+                elements.detailComments.innerHTML = '<div class="text-muted small text-center">No comments yet.</div>';
+                return;
+            }
+            elements.detailComments.innerHTML = comments.map(comment => `
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between">
+                        <strong>${comment.customerName || 'Customer'}</strong>
+                        <span class="text-warning">${'★'.repeat(Number(comment.StarValue) || 0)}</span>
+                    </div>
+                    <div class="text-muted small">${comment.addressName || ''}</div>
+                    <p class="mb-0 small">${comment.comment || ''}</p>
+                </div>
+            `).join('');
+        } catch (err) {
+            elements.detailComments.innerHTML = `<div class="text-danger small text-center">${err.message}</div>`;
+        }
+    }
+
+    async function openOptionsModal(goods) {
+        elements.optionsModalLabel.textContent = `Supplier options — ${goods.name}`;
+        elements.optionsList.innerHTML = '<div class="text-center text-muted">Loading supplier options…</div>';
+        optionsModalInstance.show();
+        try {
+            const result = await fetchJson(API.supplierOptions(goods.goodsId));
+            const offers = result.options || [];
+            if (offers.length === 0) {
+                elements.optionsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-shop display-6 d-block mb-3"></i>
+                        <p class="mb-0">No supplier listings found for this goods.</p>
+                    </div>
+                `;
+                return;
+            }
+            elements.optionsList.innerHTML = offers.map(offer => `
+                <div class="option-row" data-goods-id="${goods.goodsId}" data-supplier-goods-id="${offer.supplierGoodsId}">
+                    <div>
+                        <div class="fw-semibold">${offer.shopName || 'Supplier'}</div>
+                        <div class="text-muted small">${offer.shopType || 'Shop type'}</div>
+                    </div>
+                    <div class="fw-semibold text-primary">
+                        ETB ${(offer.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                    <div class="text-muted small">Min order ${offer.minOrder ?? 1}</div>
+                    <button class="btn btn-primary btn-sm" data-action="add-option-to-cart">
+                        <i class="bi bi-cart-plus me-1"></i>Add
+                    </button>
+                </div>
+            `).join('');
+        } catch (err) {
+            elements.optionsList.innerHTML = `<div class="text-danger text-center">${err.message}</div>`;
+        }
+    }
+
+    elements.optionsList.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-action="add-option-to-cart"]');
+        if (!button) return;
+        const row = button.closest('.option-row');
+        const goodsId = Number(row.dataset.goodsId);
+        const supplierGoodsId = Number(row.dataset.supplierGoodsId);
+        const goods = state.goods.find(g => Number(g.goodsId) === goodsId);
+        if (!goods) return;
+        const offer = (goods.supplierOffers || []).find(opt => Number(opt.supplierGoodsId) === supplierGoodsId);
+        addToCart(goods, offer);
+        renderCartModal();
+        optionsModalInstance.hide();
+    });
+
+    async function init() {
+        state.session = sessionOrRedirect();
+        if (!state.session) return;
+
+        attachEventListeners();
+        renderCartCounter();
+
+        try {
+            await Promise.all([fetchProfile(), fetchInitialData()]);
+        } catch (err) {
+            console.error('Bootstrap error', err);
+            showToast({ title: 'Load failed', body: err.message || 'Failed to load initial data.', variant: 'danger' });
+        }
+
+        showAndroidBannerIfNeeded();
+        showAndroidModalIfNeeded();
+    }
+
+    init();
+</script>
+</body>
+</html>
