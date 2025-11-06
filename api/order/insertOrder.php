@@ -123,7 +123,7 @@ function sendOrderNotifications($conn, int $orderId, int $customerId, float $tot
 
     if ($customerPhone !== null) {
         $formattedAmount = number_format($totalAmount, 2);
-        $message = "Your order #{$orderId} has been received successfully. Total amount: {$formattedAmount} birr.";
+        $message = "Your order has been received successfully. Telegram: Tiktok ";
         $sms->sendSms($customerPhone, $message);
     } else {
         error_log("Unable to send order confirmation SMS for order {$orderId}: customer phone missing or invalid.");
@@ -131,7 +131,7 @@ function sendOrderNotifications($conn, int $orderId, int $customerId, float $tot
 
     $adminPhone = formatEthiopianPhone('0943090921');
     if ($adminPhone !== null) {
-        $adminMessage = "New order #{$orderId} placed by customer ID {$customerId}" . ($customerName ? " ({$customerName})" : '') . ".";
+        $adminMessage = "New order #{$orderId} placed amount {$formattedAmount} by customer ID {$customerId}" . ($customerName ? " ({$customerName})" : '') . ".";
         $sms->sendSms($adminPhone, $adminMessage);
     } else {
         error_log("Unable to send admin SMS for order {$orderId}: admin phone invalid.");
