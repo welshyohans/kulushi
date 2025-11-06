@@ -71,6 +71,10 @@ if (mb_strlen($newName) < 2) {
     ]);
 }
 
+// Handle optional description
+$hasDescription = array_key_exists('description', $data);
+$newDescription = $hasDescription ? trim((string)$data['description']) : null;
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../model/Settings.php';
 
@@ -81,7 +85,8 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
-    $goodsStmt = $db->prepare('SELECT id, name, last_update_code FROM goods WHERE id = :id LIMIT 1');
+    // include description in selected fields
+    $goodsStmt = $db->prepare('SELECT id, name, description, last_update_code FROM goods WHERE id = :id LIMIT 1');
     $goodsStmt->execute([':id' => $goodsId]);
     $goodsRow = $goodsStmt->fetch();
 
@@ -93,24 +98,36 @@ try {
         ]);
     }
 
+    $previousDescription = array_key_exists('description', $goodsRow) ? $goodsRow['description'] : null;
+
     $settings = new Settings($db);
 
     $db->beginTransaction();
 
     $newCode = (int)$settings->nextCode();
 
-    $updateStmt = $db->prepare(
-        'UPDATE goods
+    // Build update SQL conditionally to avoid touching description when not provided
+    $updateSql = 'UPDATE goods
          SET name = :name,
              last_update_code = :code,
-             last_update = NOW()
-         WHERE id = :id'
-    );
-    $updateStmt->execute([
+             last_update = NOW()';
+    if ($hasDescription) {
+        $updateSql .= ",\n             description = :description";
+    }
+    $updateSql .= "\n         WHERE id = :id";
+
+    $updateStmt = $db->prepare($updateSql);
+
+    $params = [
         ':name' => $newName,
         ':code' => $newCode,
         ':id' => $goodsId
-    ]);
+    ];
+    if ($hasDescription) {
+        $params[':description'] = $newDescription;
+    }
+
+    $updateStmt->execute($params);
 
     $rowsAffected = $updateStmt->rowCount();
     $db->commit();
@@ -118,11 +135,13 @@ try {
     $respond(200, [
         'success' => true,
         'message' => $rowsAffected > 0
-            ? 'Goods name updated successfully.'
-            : 'No changes detected; goods name remains the same.',
+            ? 'Goods updated successfully.'
+            : 'No changes detected; goods remains the same (except last_update_code may have changed).',
         'goodsId' => $goodsId,
         'previousName' => $goodsRow['name'],
         'newName' => $newName,
+        'previousDescription' => $previousDescription,
+        'newDescription' => $hasDescription ? $newDescription : $previousDescription,
         'lastUpdateCode' => $newCode
     ]);
 } catch (PDOException $exception) {
@@ -131,7 +150,7 @@ try {
     }
     $respond(500, [
         'success' => false,
-        'message' => 'Database error while updating goods name.',
+        'message' => 'Database error while updating goods.',
         'error' => $exception->getMessage()
     ]);
 } catch (Throwable $throwable) {
