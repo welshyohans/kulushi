@@ -71,12 +71,37 @@ if (mb_strlen($newName) < 2) {
     ]);
 }
 
+$supplierIdRaw = $data['supplierId'] ?? ($data['supplier_id'] ?? null);
+if ($supplierIdRaw === null) {
+    $respond(400, [
+        'success' => false,
+        'message' => 'Missing field: supplierId'
+    ]);
+}
+$supplierId = filter_var($supplierIdRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+if ($supplierId === false) {
+    $respond(422, [
+        'success' => false,
+        'message' => 'supplierId must be a positive integer.'
+    ]);
+}
+
+$lastUpdateCodeRaw = $data['lastUpdateCode'] ?? ($data['last_update_code'] ?? 0);
+$requestedLastUpdateCode = filter_var($lastUpdateCodeRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+if ($requestedLastUpdateCode === false) {
+    $respond(422, [
+        'success' => false,
+        'message' => 'lastUpdateCode must be a non-negative integer.'
+    ]);
+}
+
 // Handle optional description
 $hasDescription = array_key_exists('description', $data);
 $newDescription = $hasDescription ? trim((string)$data['description']) : null;
 
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../model/Settings.php';
+require_once __DIR__ . '/../model/SupplierGoods.php';
 
 try {
     $database = new Database();
@@ -101,6 +126,15 @@ try {
     $previousDescription = array_key_exists('description', $goodsRow) ? $goodsRow['description'] : null;
 
     $settings = new Settings($db);
+    $sgModel = new SupplierGoods($db);
+
+    if (!$sgModel->supplierExists($supplierId)) {
+        $respond(404, [
+            'success' => false,
+            'message' => 'Supplier not found.',
+            'supplierId' => $supplierId
+        ]);
+    }
 
     $db->beginTransaction();
 
@@ -132,18 +166,23 @@ try {
     $rowsAffected = $updateStmt->rowCount();
     $db->commit();
 
-    $respond(200, [
+    $updatesPayload = $sgModel->buildUpdatesPayload($supplierId, $requestedLastUpdateCode, $settings);
+
+    $respond(200, array_merge($updatesPayload, [
         'success' => true,
         'message' => $rowsAffected > 0
             ? 'Goods updated successfully.'
             : 'No changes detected; goods remains the same (except last_update_code may have changed).',
         'goodsId' => $goodsId,
+        'supplierId' => $supplierId,
         'previousName' => $goodsRow['name'],
         'newName' => $newName,
         'previousDescription' => $previousDescription,
         'newDescription' => $hasDescription ? $newDescription : $previousDescription,
-        'lastUpdateCode' => $newCode
-    ]);
+        'lastUpdateCode' => $newCode,
+        'last_update_code' => $newCode,
+        'applied_last_update_code' => $newCode
+    ]));
 } catch (PDOException $exception) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
         $db->rollBack();

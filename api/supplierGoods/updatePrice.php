@@ -31,6 +31,9 @@ foreach ($requiredFields as $k) {
 
 $supplierId = (int)$data['supplier_id'];
 $goodsId = (int)$data['goods_id'];
+$requestedLastUpdateCode = isset($data['lastUpdateCode'])
+    ? (int)$data['lastUpdateCode']
+    : (int)($data['last_update_code'] ?? 0);
 $payload = [
     'price' => (int)$data['price'],
     'discount_start' => (int)$data['discount_start'],
@@ -72,18 +75,19 @@ try {
 
     $db->commit();
 
-    $response(200, [
+    $updatesPayload = $sgModel->buildUpdatesPayload($supplierId, $requestedLastUpdateCode, $settings);
+
+    $response(200, array_merge($updatesPayload, [
         'success' => true,
         'message' => 'Price updated',
-        'supplier_id' => $supplierId,
         'goods_id' => $goodsId,
         'affected' => $affected,
         'discount_start' => $payload['discount_start'],
         'discount_price' => $payload['discount_price'],
         'min_order' => $payload['min_order'],
         'is_available_for_credit' => $payload['is_available_for_credit'],
-        'last_update_code' => (int)$code
-    ]);
+        'applied_last_update_code' => (int)$code
+    ]));
 } catch (PDOException $e) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
         $db->rollBack();

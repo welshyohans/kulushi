@@ -21,6 +21,13 @@ if (!is_array($decoded)) {
     $response(400, ['success' => false, 'message' => 'Invalid JSON body']);
 }
 
+$requestedLastUpdateCode = 0;
+if (array_key_exists('lastUpdateCode', $decoded)) {
+    $requestedLastUpdateCode = (int)$decoded['lastUpdateCode'];
+} elseif (array_key_exists('last_update_code', $decoded)) {
+    $requestedLastUpdateCode = (int)$decoded['last_update_code'];
+}
+
 // Normalise payload: accept a single object or an array of objects.
 $payloads = [];
 if (array_keys($decoded) === range(0, count($decoded) - 1)) {
@@ -102,6 +109,19 @@ foreach ($payloads as $index => $item) {
     ];
 }
 
+$supplierIds = [];
+foreach ($operations as $op) {
+    $supplierIds[$op['supplier_id']] = true;
+}
+
+if (count($supplierIds) === 0) {
+    $response(400, ['success' => false, 'message' => 'No valid supplier identifiers detected']);
+}
+if (count($supplierIds) > 1) {
+    $response(400, ['success' => false, 'message' => 'Payload must reference a single supplier']);
+}
+$primarySupplierId = (int)array_key_first($supplierIds);
+
 try {
     $database = new Database();
     $db = $database->connect();
@@ -142,6 +162,7 @@ try {
     $db->beginTransaction();
 
     $code = $settings->nextCode();
+    $lastAppliedCode = (int)$code;
     $results = [];
 
     foreach ($operations as $op) {
@@ -183,6 +204,8 @@ try {
                 (int)$code
             );
 
+            $lastAppliedCode = (int)$code;
+
             $results[] = [
                 'index' => $op['index'],
                 'action' => 'update',
@@ -216,6 +239,8 @@ try {
                 ]
             );
 
+            $lastAppliedCode = (int)$code;
+
             $results[] = [
                 'index' => $op['index'],
                 'action' => 'insert',
@@ -228,12 +253,14 @@ try {
 
     $db->commit();
 
-    $response(200, [
+    $updatesPayload = $sgModel->buildUpdatesPayload($primarySupplierId, $requestedLastUpdateCode, $settings);
+
+    $response(200, array_merge($updatesPayload, [
         'success' => true,
         'message' => 'Supplier goods processed successfully',
-        'last_update_code' => (int)$code,
-        'results' => $results
-    ]);
+        'results' => $results,
+        'applied_last_update_code' => $lastAppliedCode
+    ]));
 } catch (PDOException $e) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
         $db->rollBack();

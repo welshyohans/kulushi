@@ -241,6 +241,38 @@ class SupplierGoods {
         return $stmt->rowCount();
     }
 
+    public function buildUpdatesPayload(int $supplierId, int $lastUpdateCode, Settings $settings): array {
+        $goodsStmt = $this->conn->prepare('SELECT * FROM goods WHERE last_update_code > :code ORDER BY last_update_code ASC');
+        $goodsStmt->execute([':code' => $lastUpdateCode]);
+        $goods = $goodsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $categoryStmt = $this->conn->prepare('SELECT id, name, commission FROM category WHERE last_update_code > :code ORDER BY last_update_code ASC');
+        $categoryStmt->execute([':code' => $lastUpdateCode]);
+        $categories = [];
+        foreach ($categoryStmt->fetchAll(PDO::FETCH_ASSOC) as $categoryRow) {
+            $categories[] = [
+                'id' => isset($categoryRow['id']) ? (int)$categoryRow['id'] : 0,
+                'name' => isset($categoryRow['name']) ? (string)$categoryRow['name'] : '',
+                'commission' => isset($categoryRow['commission']) ? (int)$categoryRow['commission'] : 0,
+            ];
+        }
+
+        $supplierGoodsStmt = $this->conn->prepare('SELECT * FROM supplier_goods WHERE supplier_id = :sid ORDER BY last_update_code ASC, id ASC');
+        $supplierGoodsStmt->execute([':sid' => $supplierId]);
+        $supplierGoods = $supplierGoodsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $currentCode = (int)$settings->getValue('last_update_code', 0);
+
+        return [
+            'supplier_id' => $supplierId,
+            'requested_last_update_code' => $lastUpdateCode,
+            'current_last_update_code' => $currentCode,
+            'goods_updates' => $goods,
+            'supplier_goods' => $supplierGoods,
+            'categories' => $categories
+        ];
+    }
+
     private function touchSupplierLastUpdate(int $supplierId, int $lastUpdateCode): void {
         $stmt = $this->conn->prepare("UPDATE supplier SET last_update_code = :code WHERE shop_id = :sid");
         $stmt->execute([

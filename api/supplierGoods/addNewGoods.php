@@ -36,6 +36,9 @@ if (!array_key_exists('supplier_id', $data)) {
     $response(400, ['success' => false, 'message' => 'Missing field: supplier_id']);
 }
 $supplierId = (int)$data['supplier_id'];
+$requestedLastUpdateCode = isset($data['lastUpdateCode'])
+    ? (int)$data['lastUpdateCode']
+    : (int)($data['last_update_code'] ?? 0);
 
 // Required supplier_goods attributes for initial linkage
 $requiredRelationFields = ['price','discount_start','discount_price','min_order','is_available_for_credit','is_available'];
@@ -117,15 +120,16 @@ try {
 
     $db->commit();
 
-    $response(200, [
+    $updatesPayload = $sgModel->buildUpdatesPayload($supplierId, $requestedLastUpdateCode, $settings);
+
+    $response(200, array_merge($updatesPayload, [
         'success' => true,
         'message' => 'Goods created and linked to supplier',
         'goods_id' => $goodsId,
-        'supplier_id' => $supplierId,
         'relation' => $relationResult,
-        'last_update_code' => (int)$code,
-        'image_url' => $imageUrl
-    ]);
+        'image_url' => $imageUrl,
+        'applied_last_update_code' => (int)$code
+    ]));
 } catch (PDOException $e) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
         $db->rollBack();

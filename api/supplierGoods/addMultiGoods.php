@@ -22,6 +22,13 @@ if (!is_array($payload)) {
     $response(400, ['success' => false, 'message' => 'Invalid JSON body']);
 }
 
+$requestedLastUpdateCode = 0;
+if (array_key_exists('lastUpdateCode', $payload)) {
+    $requestedLastUpdateCode = (int)$payload['lastUpdateCode'];
+} elseif (array_key_exists('last_update_code', $payload)) {
+    $requestedLastUpdateCode = (int)$payload['last_update_code'];
+}
+
 $simpleInput = $payload['simple_goods'] ?? ($payload['simpleGoods'] ?? []);
 $newInput = $payload['new_goods'] ?? ($payload['newGoods'] ?? []);
 
@@ -294,8 +301,33 @@ try {
         'simple_goods' => []
     ];
 
+    $lastAppliedCode = $requestedLastUpdateCode;
+
+    $supplierIds = [];
+    foreach ($newGoodsOperations as $op) {
+        $supplierIds[$op['supplier_id']] = true;
+    }
+    foreach ($simpleOperations as $op) {
+        $supplierIds[$op['supplier_id']] = true;
+    }
+
+    if (count($supplierIds) === 0) {
+        $response(400, [
+            'success' => false,
+            'message' => 'No supplier identifiers detected in payload'
+        ]);
+    }
+    if (count($supplierIds) > 1) {
+        $response(400, [
+            'success' => false,
+            'message' => 'Payload must reference a single supplier'
+        ]);
+    }
+    $primarySupplierId = (int)array_key_first($supplierIds);
+
     foreach ($newGoodsOperations as $op) {
         $code = (int)$settings->nextCode();
+        $lastAppliedCode = $code;
 
         $goodsPayload = [
             'category_id' => $op['category_id'],
@@ -341,6 +373,7 @@ try {
 
     foreach ($simpleOperations as $op) {
         $code = (int)$settings->nextCode();
+        $lastAppliedCode = $code;
         $existing = $sgModel->findBySupplierAndGoods($op['supplier_id'], $op['goods_id']);
 
         if ($op['is_update']) {
@@ -391,13 +424,16 @@ try {
 
     $db->commit();
 
-    $response(200, [
+    $updatesPayload = $sgModel->buildUpdatesPayload($primarySupplierId, $requestedLastUpdateCode, $settings);
+
+    $response(200, array_merge($updatesPayload, [
         'success' => true,
         'message' => 'Batch payload processed successfully',
         'processed_new_goods' => count($results['new_goods']),
         'processed_simple_goods' => count($results['simple_goods']),
-        'results' => $results
-    ]);
+        'results' => $results,
+        'applied_last_update_code' => $lastAppliedCode
+    ]));
 } catch (PDOException $e) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
         $db->rollBack();
