@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SMS Outreach Center</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+        crossorigin="anonymous"
+    >
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+    <style>
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f3f4ff 0%, #eef3ff 38%, #dde2f7 100%);
+        }
+
+        .navbar {
+            box-shadow: 0 16px 30px -28px rgba(33, 37, 41, 0.45);
+        }
+
+        .card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 28px 60px -40px rgba(15, 23, 42, 0.35);
+        }
+
+        .page-title {
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .list-group-item-action.active {
+            background: linear-gradient(135deg, #3f51b5 0%, #6574da 100%);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        .list-group-item-action:hover {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .empty-state {
+            padding: 3rem 1.5rem;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .badge-pill {
+            border-radius: 999px;
+        }
+
+        #customerListWrapper {
+            max-height: 520px;
+            overflow-y: auto;
+        }
+
+        .summary-tile {
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: rgba(99, 102, 241, 0.05);
+            height: 100%;
+        }
+
+        .summary-tile h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0;
+        }
+
+        .form-label {
+            font-weight: 600;
+        }
+
+        .form-text-muted {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .character-counter {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg bg-white border-bottom">
+    <div class="container">
+        <span class="navbar-brand fw-semibold text-primary">
+            <i class="bi bi-chat-dots-fill me-2"></i>
+            SMS Outreach Center
+        </span>
+        <button class="btn btn-outline-primary" id="refreshCustomersBtn">
+            <i class="bi bi-arrow-repeat me-1"></i>
+            Refresh customers
+        </button>
+    </div>
+</nav>
+
+<main class="container py-5">
+    <div class="row g-4">
+        <section class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-3">
+                    <h1 class="h4 page-title mb-1">Customers</h1>
+                    <p class="text-muted mb-0">
+                        Browse registered customers and pick one to populate the recipient details automatically.
+                    </p>
+                    <div class="mt-3">
+                        <label for="customerSearch" class="form-label text-muted small text-uppercase mb-1">
+                            <i class="bi bi-search me-1"></i>
+                            Filter customers
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-funnel"></i></span>
+                            <input
+                                type="search"
+                                class="form-control"
+                                id="customerSearch"
+                                placeholder="Search by name, shop or phone"
+                            >
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="customerListWrapper">
+                        <div class="list-group list-group-flush" id="customerList"></div>
+                        <div class="empty-state d-none" id="customerEmptyState">
+                            <i class="bi bi-person-exclamation display-6 d-block mb-3 text-primary"></i>
+                            <p class="mb-1">No customers to display.</p>
+                            <small class="d-block">Try refining your search or refreshing the list.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-people me-1"></i>
+                        <span id="customerCount">0</span> customer(s) loaded
+                    </small>
+                    <button class="btn btn-sm btn-outline-secondary" id="clearSelectionBtn" disabled>
+                        <i class="bi bi-x-circle me-1"></i>
+                        Clear selection
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="h5 page-title mb-1">Compose message</h2>
+                        <p class="text-muted mb-0">
+                            Send personalised updates to existing customers or reach out to a new phone number.
+                        </p>
+                    </div>
+                    <span class="badge bg-light text-dark badge-pill" id="selectionBadge">No customer selected</span>
+                </div>
+                <div class="card-body">
+                    <div class="alert d-none" id="smsFeedback" role="alert"></div>
+
+                    <div class="empty-state py-4" id="noCustomerSelectedNotice">
+                        <i class="bi bi-person-lines-fill display-6 d-block mb-3 text-primary"></i>
+                        <p class="mb-0">
+                            Select a customer to auto-fill their phone number or type a new phone number below.
+                        </p>
+                    </div>
+
+                    <div id="selectedCustomerSummary" class="d-none mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="summary-tile">
+                                    <small class="text-muted fw-semibold text-uppercase d-block mb-1">Customer</small>
+                                    <h2 class="text-primary" id="summaryCustomerName">—</h2>
+                                    <div class="text-muted" id="summaryCustomerShop">—</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="summary-tile">
+                                    <small class="text-muted fw-semibold text-uppercase d-block mb-1">Phone</small>
+                                    <h2 class="text-dark" id="summaryCustomerPhone">—</h2>
+                                    <div class="text-muted small" id="summaryCustomerId">ID —</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="summary-tile">
+                                    <small class="text-muted fw-semibold text-uppercase d-block mb-1">Mode</small>
+                                    <h2 class="text-success" id="summaryDeliveryMode">Direct</h2>
+                                    <div class="text-muted small">
+                                        Message will be personalised for this contact.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="smsForm" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="recipientPhone" class="form-label">Recipient phone number</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                <input
+                                    type="tel"
+                                    class="form-control"
+                                    id="recipientPhone"
+                                    placeholder="e.g. +251911000000 or 0911000000"
+                                    required
+                                    pattern="^\+?[0-9\s]{6,18}$"
+                                >
+                            </div>
+                            <div class="invalid-feedback">
+                                Enter a valid phone number using digits, spaces or a leading plus sign.
+                            </div>
+                            <div class="form-text form-text-muted">
+                                You can overwrite the phone number to reach a contact that is not in the list.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="smsMessage" class="form-label">Message</label>
+                            <textarea
+                                class="form-control"
+                                id="smsMessage"
+                                rows="6"
+                                maxlength="612"
+                                placeholder="Type the SMS content here..."
+                                required
+                            ></textarea>
+                            <div class="invalid-feedback">
+                                Provide the SMS content (maximum 612 characters).
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 character-counter">
+                                <span>
+                                    <i class="bi bi-chat-square-quote me-1"></i>
+                                    Segments: <span id="smsSegments">0</span>
+                                </span>
+                                <span id="messageCounter">0 / 612</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="smsSenderName" class="form-label">
+                                Sender name <span class="text-muted">(optional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="smsSenderName"
+                                placeholder="Defaults to your configured sender ID"
+                                maxlength="32"
+                            >
+                            <div class="form-text form-text-muted">
+                                Override the default sender name if your SMS gateway allows it.
+                            </div>
+                        </div>
+
+                        <div class="d-grid d-sm-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" id="sendSmsBtn">
+                                <span
+                                    class="spinner-border spinner-border-sm d-none"
+                                    id="sendSmsSpinner"
+                                    role="status"
+                                    aria-hidden="true"
+                                ></span>
+                                <span id="sendSmsBtnText">Send SMS</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="resetFormBtn">
+                                <i class="bi bi-eraser-fill me-1"></i>
+                                Clear form
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="small text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Messages longer than 160 characters consume multiple SMS segments. The counter above helps you
+                        monitor usage before sending. Ensure your backend endpoint <code>../api/sms/sendSms.php</code>
+                        accepts the JSON payload used by this page.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+<script>
+    (function ($) {
+        'use strict';
+
+        const MAX_MESSAGE_LENGTH = 612;
+        const SEGMENT_LENGTH = 160;
+
+        const endpoints = {
+            customersPrimary: '../api/customer/list.php',
+            customersFallback: '../api/getOrder.php',
+            sendSms: '../api/sms/sendSms.php'
+        };
+
+        const state = {
+            customers: [],
+            filteredCustomers: [],
+            selectedCustomer: null,
+            fallbackMode: false
+        };
+
+        const $customerList = $('#customerList');
+        const $customerEmptyState = $('#customerEmptyState');
+        const $customerCount = $('#customerCount');
+        const $selectionBadge = $('#selectionBadge');
+        const $smsFeedback = $('#smsFeedback');
+        const $clearSelectionBtn = $('#clearSelectionBtn');
+        const $noCustomerNotice = $('#noCustomerSelectedNotice');
+        const $selectedCustomerSummary = $('#selectedCustomerSummary');
+        const $recipientPhone = $('#recipientPhone');
+        const $smsMessage = $('#smsMessage');
+        const $smsSegments = $('#smsSegments');
+        const $messageCounter = $('#messageCounter');
+        const $sendSmsBtn = $('#sendSmsBtn');
+        const $sendSmsSpinner = $('#sendSmsSpinner');
+        const $sendSmsBtnText = $('#sendSmsBtnText');
+
+        function showFeedback(type, message) {
+            $smsFeedback
+                .removeClass('d-none alert-success alert-danger alert-warning alert-info')
+                .addClass(`alert alert-${type}`)
+                .text(message);
+
+            setTimeout(() => {
+                $smsFeedback.addClass('d-none');
+            }, 4200);
+        }
+
+        function setCustomerListLoading(isLoading) {
+            if (isLoading) {
+                $customerList.html(`
+                    <div class="empty-state">
+                        <div class="spinner-border text-primary mb-3"></div>
+                        <p class="mb-0">Loading customers…</p>
+                        <small class="d-block text-muted">Please wait while we fetch the latest registry.</small>
+                    </div>
+                `);
+                $customerEmptyState.addClass('d-none');
+            } else {
+                $customerList.empty();
+            }
+        }
+
+        function normalisePhone(phone) {
+            if (typeof phone !== 'string') {
+                return '';
+            }
+            const trimmed = phone.trim();
+            if (trimmed === '') {
+                return '';
+            }
+            return trimmed.replace(/\s+/g, '');
+        }
+
+        function buildCustomerRecord(raw) {
+            return {
+                id: Number(raw.id) || null,
+                name: raw.name || raw.customerName || 'Unnamed customer',
+                phone: raw.phone || raw.customerPhone || '',
+                shop: raw.shop_name || raw.shopName || raw.shop || '',
+                lastOrderAt: raw.orderTime || raw.created_at || null
+            };
+        }
+
+        function deduplicateCustomers(list) {
+            const map = new Map();
+            list.forEach((customer) => {
+                const record = buildCustomerRecord(customer);
+                const key = record.phone ? normalisePhone(record.phone) : `id-${record.id}`;
+                if (!map.has(key) && (record.phone || record.id !== null)) {
+                    map.set(key, record);
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) {
+                return '—';
+            }
+            const date = new Date(isoString);
+            if (Number.isNaN(date.getTime())) {
+                return isoString;
+            }
+            return date.toLocaleString();
+        }
+
+        function renderCustomers(customers) {
+            $customerList.empty();
+
+            if (!Array.isArray(customers) || customers.length === 0) {
+                $customerEmptyState.removeClass('d-none');
+                $customerCount.text('0');
+                return;
+            }
+
+            $customerEmptyState.addClass('d-none');
+            $customerCount.text(String(customers.length));
+
+            customers.forEach((customer, index) => {
+                const item = $(`
+                    <button type="button"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
+                            data-index="${index}">
+                        <div>
+                            <div class="fw-semibold">${customer.name}</div>
+                            <small class="text-muted d-block">${customer.shop || '—'}</small>
+                            <small class="text-muted">${customer.phone || 'Phone unavailable'}</small>
+                        </div>
+                        <div class="text-end">
+                            ${customer.id !== null ? `<span class="badge bg-primary-subtle text-primary-emphasis badge-pill">#${customer.id}</span>` : ''}
+                            ${customer.lastOrderAt ? `<div class="small text-muted mt-1">Last order: ${formatDate(customer.lastOrderAt)}</div>` : ''}
+                        </div>
+                    </button>
+                `);
+                $customerList.append(item);
+            });
+        }
+
+        function updateSelectionBadge() {
+            if (state.selectedCustomer) {
+                const descriptor = state.selectedCustomer.id !== null
+                    ? `Customer #${state.selectedCustomer.id}`
+                    : 'Manual recipient';
+                $selectionBadge
+                    .removeClass()
+                    .addClass('badge bg-success-subtle text-success badge-pill')
+                    .text(descriptor);
+                $clearSelectionBtn.prop('disabled', false);
+            } else {
+                $selectionBadge
+                    .removeClass()
+                    .addClass('badge bg-light text-dark badge-pill')
+                    .text('No customer selected');
+                $clearSelectionBtn.prop('disabled', true);
+            }
+        }
+
+        function updateSelectedCustomerSummary() {
+            if (state.selectedCustomer) {
+                $('#summaryCustomerName').text(state.selectedCustomer.name || '—');
+                $('#summaryCustomerShop').text(state.selectedCustomer.shop || '—');
+                $('#summaryCustomerPhone').text(state.selectedCustomer.phone || '—');
+                $('#summaryCustomerId').text(state.selectedCustomer.id !== null ? `ID #${state.selectedCustomer.id}` : 'ID —');
+                $selectedCustomerSummary.removeClass('d-none');
+                $noCustomerNotice.addClass('d-none');
+                const normalised = normalisePhone(state.selectedCustomer.phone);
+                if (normalised) {
+                    $recipientPhone.val(normalised);
+                }
+            } else {
+                $selectedCustomerSummary.addClass('d-none');
+                $noCustomerNotice.removeClass('d-none');
+            }
+            updateSelectionBadge();
+        }
+
+        function applyFilter(query) {
+            if (!query) {
+                state.filteredCustomers = state.customers.slice();
+            } else {
+                const normalisedQuery = query.trim().toLowerCase();
+                state.filteredCustomers = state.customers.filter((customer) => {
+                    const haystack = [
+                        customer.name,
+                        customer.shop,
+                        customer.phone,
+                        customer.id !== null ? String(customer.id) : ''
+                    ].join(' ').toLowerCase();
+                    return haystack.includes(normalisedQuery);
+                });
+            }
+            renderCustomers(state.filteredCustomers);
+            state.selectedCustomer = null;
+            updateSelectedCustomerSummary();
+        }
+
+        function fetchCustomersPrimary() {
+            return $.ajax({
+                url: endpoints.customersPrimary,
+                method: 'GET',
+                dataType: 'json'
+            }).then((response) => {
+                if (response && response.success && Array.isArray(response.customers)) {
+                    return deduplicateCustomers(response.customers);
+                }
+                return [];
+            });
+        }
+
+        function fetchCustomersFallback() {
+            return $.ajax({
+                url: endpoints.customersFallback,
+                method: 'GET',
+                dataType: 'json'
+            }).then((response) => {
+                if (response && response.success && Array.isArray(response.orders)) {
+                    return deduplicateCustomers(response.orders);
+                }
+                return [];
+            });
+        }
+
+        function loadCustomers() {
+            setCustomerListLoading(true);
+            const deferred = $.Deferred();
+
+            fetchCustomersPrimary()
+                .done((customers) => {
+                    deferred.resolve({
+                        customers,
+                        fallback: false
+                    });
+                })
+                .fail(() => {
+                    fetchCustomersFallback()
+                        .done((customers) => {
+                            deferred.resolve({
+                                customers,
+                                fallback: true
+                            });
+                        })
+                        .fail((error) => {
+                            deferred.reject(error);
+                        });
+                });
+
+            return deferred.promise()
+                .done(({ customers, fallback }) => {
+                    state.fallbackMode = fallback;
+                    state.customers = customers;
+                    state.filteredCustomers = customers.slice();
+                    renderCustomers(state.filteredCustomers);
+                    state.selectedCustomer = null;
+                    updateSelectedCustomerSummary();
+                })
+                .fail(() => {
+                    state.customers = [];
+                    state.filteredCustomers = [];
+                    renderCustomers([]);
+                    showFeedback('danger', 'Failed to load customers. Please try again later.');
+                });
+        }
+
+        function setSendingState(isSending) {
+            $sendSmsBtn.prop('disabled', isSending);
+            $sendSmsSpinner.toggleClass('d-none', !isSending);
+            $sendSmsBtnText.text(isSending ? 'Sending…' : 'Send SMS');
+        }
+
+        function updateMessageStats() {
+            const text = $smsMessage.val() || '';
+            const length = text.length;
+            const segments = length === 0 ? 0 : Math.ceil(length / SEGMENT_LENGTH);
+            $messageCounter.text(`${length} / ${MAX_MESSAGE_LENGTH}`);
+            $smsSegments.text(String(segments));
+        }
+
+        function clearForm() {
+            const formElement = $('#smsForm')[0];
+            formElement.reset();
+            formElement.classList.remove('was-validated');
+            state.selectedCustomer = null;
+            $customerList.find('.list-group-item').removeClass('active');
+            updateSelectedCustomerSummary();
+            updateMessageStats();
+        }
+
+        function sendSmsRequest(payload) {
+            const deferred = $.Deferred();
+
+            $.ajax({
+                url: endpoints.sendSms,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                dataType: 'json'
+            }).done((response) => {
+                deferred.resolve(response);
+            }).fail((jqXHR) => {
+                $.ajax({
+                    url: endpoints.sendSms,
+                    method: 'POST',
+                    data: payload,
+                    dataType: 'json'
+                }).done((response) => {
+                    deferred.resolve(response);
+                }).fail((fallbackError) => {
+                    deferred.reject(fallbackError);
+                });
+            });
+
+            return deferred.promise();
+        }
+
+        function normalisePayload(phone, message, senderName) {
+            const payload = {
+                phone,
+                message
+            };
+            if (senderName) {
+                payload.sender = senderName;
+            }
+            if (state.selectedCustomer && state.selectedCustomer.id !== null) {
+                payload.customerId = state.selectedCustomer.id;
+            }
+            return payload;
+        }
+
+        function initialiseEventHandlers() {
+            $('#customerSearch').on('input', function () {
+                applyFilter($(this).val());
+            });
+
+            $customerList.on('click', '.list-group-item', function () {
+                const index = Number($(this).data('index'));
+                if (!Number.isInteger(index)) {
+                    return;
+                }
+                const customer = state.filteredCustomers[index];
+                if (!customer) {
+                    return;
+                }
+                state.selectedCustomer = customer;
+                $customerList.find('.list-group-item').removeClass('active');
+                $(this).addClass('active');
+                updateSelectedCustomerSummary();
+            });
+
+            $('#refreshCustomersBtn').on('click', () => {
+                loadCustomers().done(() => {
+                    showFeedback('info', state.fallbackMode
+                        ? 'Customers refreshed using order history fallback.'
+                        : 'Customer directory refreshed.');
+                });
+            });
+
+            $clearSelectionBtn.on('click', () => {
+                state.selectedCustomer = null;
+                $customerList.find('.list-group-item').removeClass('active');
+                updateSelectedCustomerSummary();
+            });
+
+            $('#resetFormBtn').on('click', () => {
+                clearForm();
+            });
+
+            $smsMessage.on('input', updateMessageStats);
+
+            $('#smsForm').on('submit', function (event) {
+                event.preventDefault();
+                const form = this;
+
+                if (!form.checkValidity()) {
+                    form.classList.add('was-validated');
+                    return;
+                }
+                form.classList.remove('was-validated');
+
+                const phone = normalisePhone($recipientPhone.val());
+                const message = ($smsMessage.val() || '').trim();
+                const senderName = ($('#smsSenderName').val() || '').trim();
+
+                if (!phone) {
+                    showFeedback('warning', 'Provide a valid recipient phone number.');
+                    $recipientPhone.trigger('focus');
+                    return;
+                }
+
+                if (!message) {
+                    showFeedback('warning', 'Write the SMS content before sending.');
+                    $smsMessage.trigger('focus');
+                    return;
+                }
+
+                const payload = normalisePayload(phone, message, senderName);
+
+                setSendingState(true);
+                sendSmsRequest(payload)
+                    .done((response) => {
+                        if (response && response.success) {
+                            showFeedback('success', response.message || 'SMS sent successfully.');
+                            clearForm();
+                        } else {
+                            showFeedback('warning', response?.message || 'SMS may not have been sent. Please verify.');
+                        }
+                    })
+                    .fail((error) => {
+                        const messageText = error?.responseJSON?.message
+                            || error?.statusText
+                            || 'Unable to reach the SMS service.';
+                        showFeedback('danger', messageText);
+                    })
+                    .always(() => {
+                        setSendingState(false);
+                    });
+            });
+        }
+
+        $(document).ready(() => {
+            initialiseEventHandlers();
+            updateMessageStats();
+            loadCustomers();
+        });
+    })(jQuery);
+</script>
+</body>
+</html>
