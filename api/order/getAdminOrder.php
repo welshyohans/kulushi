@@ -8,73 +8,68 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 
 require_once __DIR__ . '/../../config/Database.php';
 
-$respond = static function (int $status, array $payload): void {
+/**
+ * Sends a JSON response.
+ *
+ * @param int $status The HTTP status code.
+ * @param array $payload The response payload.
+ */
+function respond(int $status, array $payload): void {
     http_response_code($status);
     echo json_encode($payload);
     exit;
-};
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    $respond(405, [
+    respond(405, [
         'success' => false,
         'message' => 'Method not allowed. Use POST.',
-        'orders' => []
     ]);
 }
 
 $rawBody = file_get_contents('php://input');
 if ($rawBody === false) {
-    $respond(400, [
+    respond(400, [
         'success' => false,
         'message' => 'Unable to read request body.',
-        'orders' => []
     ]);
 }
 
 $data = json_decode($rawBody, true);
 if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
-    $respond(400, [
+    respond(400, [
         'success' => false,
         'message' => 'Invalid JSON payload.',
-        'orders' => []
     ]);
 }
 
-if (!array_key_exists('date', $data)) {
-    $respond(400, [
+if (!isset($data['date']) || empty(trim($data['date']))) {
+    respond(400, [
         'success' => false,
-        'message' => 'Missing field: date.',
-        'orders' => []
+        'message' => 'Missing or empty field: date.',
     ]);
 }
 
-$dateRaw = trim($data['date'] ?? '');
-$formattedDate = null;
-$acceptedFormats = ['Y-m-d', 'd-m-Y', 'm/d/Y', 'd/m/Y', 'Y/m/d'];
+$dateRaw = trim($data['date']);
+$timestamp = strtotime($dateRaw);
 
-foreach ($acceptedFormats as $format) {
-    $dateTime = DateTime::createFromFormat($format, $dateRaw);
-    if ($dateTime !== false && $dateTime->format($format) === $dateRaw) {
-        $formattedDate = $dateTime->format('Y-m-d');
-        break;
-    }
-}
-
-if ($formattedDate === null) {
-    $respond(400, [
+if ($timestamp === false) {
+    respond(400, [
         'success' => false,
-        'message' => 'Invalid date format. Accepted formats: YYYY-MM-DD, DD-MM-YYYY, MM/DD/YYYY, DD/MM/YYYY, YYYY/MM/DD.',
-        'orders' => []
+        'message' => 'Invalid date format. Please provide a recognizable date format.',
     ]);
 }
+
+// Format the date to 'YYYY-MM-DD' for SQL comparison
+$formattedDate = date('Y-m-d', $timestamp);
 
 try {
     $database = new Database();
     $db = $database->connect();
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-    $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+    // Using DATE() function to compare only the date part of the timestamp
     $stmt = $db->prepare(
         'SELECT
             o.id AS order_id,
@@ -92,9 +87,11 @@ try {
     );
     $stmt->execute([':order_date' => $formattedDate]);
 
-    $orders = [];
-    while ($row = $stmt->fetch()) {
-        $orders[] = [
+    $orders = $stmt->fetchAll();
+
+    $payload = [
+        'success' => true,
+        'orders' => array_map(static fn($row) => [
             'orderId' => (int)$row['order_id'],
             'customerName' => $row['customer_name'] ?? 'Unknown Customer',
             'totalPrice' => isset($row['total_price']) ? (float)$row['total_price'] : 0.0,
@@ -103,31 +100,29 @@ try {
             'location' => $row['location'] ?? null,
             'comment' => $row['comment'] ?? null,
             'deliverStatus' => (int)$row['deliver_status'],
-        ];
-    }
-
-    $payload = [
-        'success' => true,
-        'orders' => $orders,
+        ], $orders),
     ];
 
     if (empty($orders)) {
         $payload['message'] = 'No orders found for the requested date.';
     }
 
-    $respond(200, $payload);
+    respond(200, $payload);
+
 } catch (PDOException $exception) {
-    error_log($exception->getMessage());
-    $respond(500, [
+    // Log the detailed error message for debugging
+    error_log('Database Error: ' . $exception->getMessage());
+    respond(500, [
         'success' => false,
-        'message' => 'Database error while retrieving admin orders.',
-        'orders' => []
+        'message' => 'A database error occurred while retrieving orders.',
     ]);
 } catch (Throwable $exception) {
-    error_log($exception->getMessage());
-    $respond(500, [
+    // Catch any other unexpected errors
+    error_log('Server Error: ' . $exception->getMessage());
+    respond(500, [
         'success' => false,
-        'message' => 'Unexpected server error while retrieving admin orders.',
-        'orders' => []
+        'message' => 'An unexpected server error occurred.',
     ]);
 }
+
+?>
