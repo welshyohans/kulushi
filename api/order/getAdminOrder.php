@@ -48,24 +48,25 @@ if (!array_key_exists('date', $data)) {
     ]);
 }
 
-$dateRaw = trim($data->date ?? '');
-$ts = strtotime($dateRaw);
-if ($ts === false) {
-    echo json_encode(['success' => false, 'message' => 'invalid date']);
-    exit;
-}
-$date = date('Y-m-d', $ts); // "2025-11-9" -> "2025-11-09"
+$dateRaw = trim($data['date'] ?? '');
+$formattedDate = null;
+$acceptedFormats = ['Y-m-d', 'd-m-Y', 'm/d/Y', 'd/m/Y', 'Y/m/d'];
 
-$dateTime = DateTime::createFromFormat('Y-m-d', $date);
-if ($dateTime === false || $dateTime->format('Y-m-d') !== $date) {
-    $respond(422, [
+foreach ($acceptedFormats as $format) {
+    $dateTime = DateTime::createFromFormat($format, $dateRaw);
+    if ($dateTime !== false && $dateTime->format($format) === $dateRaw) {
+        $formattedDate = $dateTime->format('Y-m-d');
+        break;
+    }
+}
+
+if ($formattedDate === null) {
+    $respond(400, [
         'success' => false,
-        'message' => 'date must be in YYYY-MM-DD format.',
+        'message' => 'Invalid date format. Accepted formats: YYYY-MM-DD, DD-MM-YYYY, MM/DD/YYYY, DD/MM/YYYY, YYYY/MM/DD.',
         'orders' => []
     ]);
 }
-
-$formattedDate = $dateTime->format('Y-m-d');
 
 try {
     $database = new Database();
