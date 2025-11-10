@@ -48,14 +48,13 @@ if (!array_key_exists('date', $data)) {
     ]);
 }
 
-$date = trim((string)$data['date']);
-if ($date === '') {
-    $respond(400, [
-        'success' => false,
-        'message' => 'date field cannot be blank.',
-        'orders' => []
-    ]);
+$dateRaw = trim($data->date ?? '');
+$ts = strtotime($dateRaw);
+if ($ts === false) {
+    echo json_encode(['success' => false, 'message' => 'invalid date']);
+    exit;
 }
+$date = date('Y-m-d', $ts); // "2025-11-9" -> "2025-11-09"
 
 $dateTime = DateTime::createFromFormat('Y-m-d', $date);
 if ($dateTime === false || $dateTime->format('Y-m-d') !== $date) {
