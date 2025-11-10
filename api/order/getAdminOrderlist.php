@@ -18,7 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $respond(405, [
         'success' => false,
         'message' => 'Method not allowed. Use POST.',
-        'orderList' => []
+        'orderList' => [],
+        'suppliers' => []
     ]);
 }
 
@@ -27,7 +28,8 @@ if ($rawBody === false) {
     $respond(400, [
         'success' => false,
         'message' => 'Unable to read request body.',
-        'orderList' => []
+        'orderList' => [],
+        'suppliers' => []
     ]);
 }
 
@@ -36,7 +38,8 @@ if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
     $respond(400, [
         'success' => false,
         'message' => 'Invalid JSON payload.',
-        'orderList' => []
+        'orderList' => [],
+        'suppliers' => []
     ]);
 }
 
@@ -44,7 +47,8 @@ if (!array_key_exists('orderId', $data)) {
     $respond(400, [
         'success' => false,
         'message' => 'Missing field: orderId.',
-        'orderList' => []
+        'orderList' => [],
+        'suppliers' => []
     ]);
 }
 
@@ -55,7 +59,8 @@ if ($orderId === false || $orderId === null) {
     $respond(422, [
         'success' => false,
         'message' => 'orderId must be a positive integer.',
-        'orderList' => []
+        'orderList' => [],
+        'suppliers' => []
     ]);
 }
 
@@ -72,7 +77,8 @@ try {
         $respond(404, [
             'success' => false,
             'message' => 'Order not found.',
-            'orderList' => []
+            'orderList' => [],
+            'suppliers' => []
         ]);
     }
 
@@ -88,84 +94,50 @@ try {
             COALESCE(ol.eligible_for_credit, 0) AS eligible_for_credit,
             g.name AS goods_name,
             g.image_url AS goods_image,
-            sg.supplier_id
+            sg.supplier_id,
+            s.shop_name AS supplier_name
         FROM ordered_list ol
         LEFT JOIN goods g ON g.id = ol.goods_id
         LEFT JOIN supplier_goods sg ON sg.id = ol.supplier_goods_id
+        LEFT JOIN supplier s ON s.shop_id = sg.supplier_id
         WHERE ol.orders_id = :orderId
         ORDER BY ol.id ASC'
     );
     $itemsStmt->execute([':orderId' => $orderId]);
     $rows = $itemsStmt->fetchAll();
 
-    $goodsIdMap = [];
+    $orderList = [];
+    $suppliersMap = [];
     foreach ($rows as $row) {
-        if (isset($row['goods_id'])) {
-            $goodsIdMap[(int)$row['goods_id']] = true;
-        }
-    }
-    $goodsIds = array_keys($goodsIdMap);
-
-    $suppliersByGoods = [];
-    $supplierIdsByGoods = [];
-    if (!empty($goodsIds)) {
-        $placeholders = implode(',', array_fill(0, count($goodsIds), '?'));
-        $supplierStmt = $db->prepare("
-            SELECT sg.goods_id, s.shop_id, s.shop_name
-            FROM supplier_goods sg
-            INNER JOIN supplier s ON s.shop_id = sg.supplier_id
-            WHERE sg.goods_id IN ($placeholders)
-            ORDER BY sg.goods_id ASC, s.shop_name ASC
-        ");
-        $supplierStmt->execute($goodsIds);
-
-        while ($supplierRow = $supplierStmt->fetch()) {
-            $goodsId = isset($supplierRow['goods_id']) ? (int)$supplierRow['goods_id'] : 0;
-            $supplierId = isset($supplierRow['shop_id']) ? (int)$supplierRow['shop_id'] : 0;
-            if ($supplierId === 0) {
-                continue;
-            }
-
-            if (!isset($suppliersByGoods[$goodsId])) {
-                $suppliersByGoods[$goodsId] = [];
-                $supplierIdsByGoods[$goodsId] = [];
-            }
-
-            if (in_array($supplierId, $supplierIdsByGoods[$goodsId], true)) {
-                continue;
-            }
-
-            $supplierIdsByGoods[$goodsId][] = $supplierId;
-            $suppliersByGoods[$goodsId][] = [
+        $supplierId = isset($row['supplier_id']) ? (int)$row['supplier_id'] : 0;
+        if ($supplierId > 0 && !isset($suppliersMap[$supplierId])) {
+            $suppliersMap[$supplierId] = [
                 'supplierId' => $supplierId,
-                'supplierName' => $supplierRow['shop_name'] ?? ''
+                'supplierName' => $row['supplier_name'] ?? 'Unknown Supplier'
             ];
         }
-    }
 
-    $orderList = [];
-    foreach ($rows as $row) {
-        $goodsId = isset($row['goods_id']) ? (int)$row['goods_id'] : 0;
-        $supplierList = $suppliersByGoods[$goodsId] ?? [];
         $orderList[] = [
             'orderListId' => (int)$row['order_list_id'],
             'orderId' => (int)$row['order_id'],
-            'supplierId' => isset($row['supplier_id']) ? (int)$row['supplier_id'] : 0,
+            'supplierId' => $supplierId,
             'goodsName' => $row['goods_name'] ?? 'Unknown Item',
-            'goodsId' => $goodsId,
+            'goodsId' => isset($row['goods_id']) ? (int)$row['goods_id'] : 0,
             'supplierGoodsId' => $row['supplier_goods_id'] !== null ? (int)$row['supplier_goods_id'] : null,
             'price' => (float)$row['unit_price'],
             'quantity' => (float)$row['quantity'],
             'status' => (int)$row['status'],
             'eligibleForCredit' => (int)$row['eligible_for_credit'],
             'imageUrl' => $row['goods_image'] ?? null,
-            'suppliers' => $supplierList,
         ];
     }
+
+    $suppliers = array_values($suppliersMap);
 
     $payload = [
         'success' => true,
         'orderList' => $orderList,
+        'suppliers' => $suppliers,
     ];
 
     if (empty($orderList)) {
@@ -178,13 +150,15 @@ try {
     $respond(500, [
         'success' => false,
         'message' => 'Database error while retrieving order list.',
-        'orderList' => []
+        'orderList' => [],
+        'suppliers' => []
     ]);
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
     $respond(500, [
         'success' => false,
         'message' => 'Unexpected server error while retrieving order list.',
-        'orderList' => []
+        'orderList' => [],
+        'suppliers' => []
     ]);
 }
