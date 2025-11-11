@@ -100,7 +100,7 @@ if ($validatedOrderListIds === []) {
 $status = filter_var(
     $data['status'],
     FILTER_VALIDATE_INT,
-    ['options' => ['min_range' => 0, 'max_range' => 127]]
+    ['options' => ['min_range' => -1, 'max_range' => 127]]
 );
 if ($status === false) {
     $respond(422, [
