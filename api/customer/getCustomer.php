@@ -52,6 +52,7 @@ try {
 
     $respond(200, [
         'success' => true,
+        'message' => null,
         'customers' => $customers
     ]);
 } catch (PDOException $exception) {
