@@ -207,7 +207,7 @@ SQL;
     $affectedRows = $updateStmt->rowCount();
 
     $recalculatedOrders = [];
-    if ($status === -1 && $ordersToRecalc !== []) {
+    if ($ordersToRecalc !== []) {
         $ordersToRecalc = array_values(array_unique($ordersToRecalc));
 
         $totalStmt = $db->prepare(
