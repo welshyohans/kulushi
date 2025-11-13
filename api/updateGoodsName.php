@@ -99,6 +99,27 @@ if ($requestedLastUpdateCode === false) {
 $hasDescription = array_key_exists('description', $data);
 $newDescription = $hasDescription ? trim((string)$data['description']) : null;
 
+$hasTikTokUrl = array_key_exists('tiktokUrl', $data);
+$tiktokUrl = $hasTikTokUrl ? trim((string)$data['tiktokUrl']) : null;
+$shouldUpdateTikTokUrl = $hasTikTokUrl && $tiktokUrl !== '';
+
+$hasPriority = array_key_exists('priority', $data);
+$priorityValue = null;
+$shouldUpdatePriority = false;
+if ($hasPriority) {
+    $rawPriority = $data['priority'];
+    $priorityValue = filter_var($rawPriority, FILTER_VALIDATE_INT);
+    if ($priorityValue === false) {
+        $respond(422, [
+            'success' => false,
+            'message' => 'priority must be an integer.'
+        ]);
+    }
+    if ($priorityValue !== 0) {
+        $shouldUpdatePriority = true;
+    }
+}
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../model/Settings.php';
 require_once __DIR__ . '/../model/SupplierGoods.php';
@@ -110,8 +131,8 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
-    // include description in selected fields
-    $goodsStmt = $db->prepare('SELECT id, name, description, last_update_code FROM goods WHERE id = :id LIMIT 1');
+    // include description, tiktok_url and priority in selected fields
+    $goodsStmt = $db->prepare('SELECT id, name, description, last_update_code, tiktok_url, priority FROM goods WHERE id = :id LIMIT 1');
     $goodsStmt->execute([':id' => $goodsId]);
     $goodsRow = $goodsStmt->fetch();
 
@@ -124,6 +145,8 @@ try {
     }
 
     $previousDescription = array_key_exists('description', $goodsRow) ? $goodsRow['description'] : null;
+    $previousTikTokUrl = array_key_exists('tiktok_url', $goodsRow) ? $goodsRow['tiktok_url'] : null;
+    $previousPriority = array_key_exists('priority', $goodsRow) ? (int)$goodsRow['priority'] : null;
 
     $settings = new Settings($db);
     $sgModel = new SupplierGoods($db);
@@ -148,6 +171,12 @@ try {
     if ($hasDescription) {
         $updateSql .= ",\n             description = :description";
     }
+    if ($shouldUpdateTikTokUrl) {
+        $updateSql .= ",\n             tiktok_url = :tiktokUrl";
+    }
+    if ($shouldUpdatePriority) {
+        $updateSql .= ",\n             priority = :priority";
+    }
     $updateSql .= "\n         WHERE id = :id";
 
     $updateStmt = $db->prepare($updateSql);
@@ -159,6 +188,12 @@ try {
     ];
     if ($hasDescription) {
         $params[':description'] = $newDescription;
+    }
+    if ($shouldUpdateTikTokUrl) {
+        $params[':tiktokUrl'] = $tiktokUrl;
+    }
+    if ($shouldUpdatePriority) {
+        $params[':priority'] = $priorityValue;
     }
 
     $updateStmt->execute($params);
@@ -179,6 +214,10 @@ try {
         'newName' => $newName,
         'previousDescription' => $previousDescription,
         'newDescription' => $hasDescription ? $newDescription : $previousDescription,
+        'previousTikTokUrl' => $previousTikTokUrl,
+        'newTikTokUrl' => $shouldUpdateTikTokUrl ? $tiktokUrl : $previousTikTokUrl,
+        'previousPriority' => $previousPriority,
+        'newPriority' => $shouldUpdatePriority ? $priorityValue : $previousPriority,
         'lastUpdateCode' => $newCode,
         'last_update_code' => $newCode,
         'applied_last_update_code' => $newCode
