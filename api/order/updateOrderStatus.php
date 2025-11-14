@@ -107,7 +107,10 @@ try {
     $db->beginTransaction();
 
     $selectStmt = $db->prepare(
-        'SELECT id, orders_id FROM ordered_list WHERE id = :id LIMIT 1 FOR UPDATE'
+        'SELECT id, orders_id, supplier_goods_id, goods_id
+         FROM ordered_list
+         WHERE id = :id
+         LIMIT 1 FOR UPDATE'
     );
     $selectStmt->execute([':id' => $orderListId]);
     $orderListRow = $selectStmt->fetch();
