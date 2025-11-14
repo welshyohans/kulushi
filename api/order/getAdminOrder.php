@@ -89,6 +89,61 @@ try {
 
     $orders = $stmt->fetchAll();
 
+    $orderList = [];
+    $suppliersMap = [];
+
+    $orderIds = array_values(array_unique(array_map(static fn($row) => (int)$row['order_id'], $orders)));
+    if (!empty($orderIds)) {
+        $placeholders = implode(', ', array_fill(0, count($orderIds), '?'));
+        $itemsStmt = $db->prepare(
+            'SELECT
+                ol.id AS order_list_id,
+                ol.orders_id AS order_id,
+                ol.goods_id,
+                ol.supplier_goods_id,
+                COALESCE(ol.each_price, sg.price, 0) AS unit_price,
+                COALESCE(ol.quantity, 0) AS quantity,
+                COALESCE(ol.status, 0) AS status,
+                COALESCE(ol.eligible_for_credit, 0) AS eligible_for_credit,
+                g.name AS goods_name,
+                g.image_url AS goods_image,
+                sg.supplier_id,
+                s.shop_name AS supplier_name
+            FROM ordered_list ol
+            LEFT JOIN goods g ON g.id = ol.goods_id
+            LEFT JOIN supplier_goods sg ON sg.id = ol.supplier_goods_id
+            LEFT JOIN supplier s ON s.shop_id = sg.supplier_id
+            WHERE ol.orders_id IN (' . $placeholders . ')
+            ORDER BY ol.id ASC'
+        );
+        $itemsStmt->execute($orderIds);
+        $rows = $itemsStmt->fetchAll();
+
+        foreach ($rows as $row) {
+            $supplierId = isset($row['supplier_id']) ? (int)$row['supplier_id'] : 0;
+            if ($supplierId > 0 && !isset($suppliersMap[$supplierId])) {
+                $suppliersMap[$supplierId] = [
+                    'supplierId' => $supplierId,
+                    'supplierName' => $row['supplier_name'] ?? 'Unknown Supplier',
+                ];
+            }
+
+            $orderList[] = [
+                'orderListId' => (int)$row['order_list_id'],
+                'orderId' => (int)$row['order_id'],
+                'supplierId' => $supplierId,
+                'goodsName' => $row['goods_name'] ?? 'Unknown Item',
+                'goodsId' => isset($row['goods_id']) ? (int)$row['goods_id'] : 0,
+                'supplierGoodsId' => $row['supplier_goods_id'] !== null ? (int)$row['supplier_goods_id'] : null,
+                'price' => (float)$row['unit_price'],
+                'quantity' => (float)$row['quantity'],
+                'status' => (int)$row['status'],
+                'eligibleForCredit' => (int)$row['eligible_for_credit'],
+                'imageUrl' => $row['goods_image'] ?? null,
+            ];
+        }
+    }
+
     $payload = [
         'success' => true,
         'orders' => array_map(static fn($row) => [
@@ -101,6 +156,8 @@ try {
             'comment' => $row['comment'] ?? null,
             'deliverStatus' => (int)$row['deliver_status'],
         ], $orders),
+        'orderList' => $orderList,
+        'suppliers' => array_values($suppliersMap),
     ];
 
     if (empty($orders)) {
