@@ -73,7 +73,22 @@ if ($status === false) {
     ]);
 }
 
+$isAvailableRaw = $data['isAvailable'] ?? ($data['is_available'] ?? 1);
+$isAvailable = filter_var(
+    $isAvailableRaw,
+    FILTER_VALIDATE_INT,
+    ['options' => ['min_range' => 0, 'max_range' => 1]]
+);
+if ($isAvailable === false) {
+    $respond(422, [
+        'success' => false,
+        'message' => 'isAvailable must be either 0 or 1.'
+    ]);
+}
+
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../model/Settings.php';
+require_once __DIR__ . '/../../model/SupplierGoods.php';
 
 try {
     $database = new Database();
@@ -107,6 +122,12 @@ try {
     }
 
     $ordersId = (int)$orderListRow['orders_id'];
+    $supplierGoodsId = $orderListRow['supplier_goods_id'] !== null
+        ? (int)$orderListRow['supplier_goods_id']
+        : null;
+    $goodsId = $orderListRow['goods_id'] !== null
+        ? (int)$orderListRow['goods_id']
+        : null;
 
     $updateStmt = $db->prepare(
         'UPDATE ordered_list SET status = :status WHERE id = :id'
@@ -133,16 +154,45 @@ try {
         ':orderId' => $ordersId
     ]);
 
+    if ($isAvailable === 0) {
+        $settings = new Settings($db);
+        $supplierGoodsModel = new SupplierGoods($db);
+        $newLastUpdateCode = (int)$settings->nextCode();
+
+        if ($supplierGoodsId !== null) {
+            $supplierGoodsModel->updateAvailabilityById(
+                $supplierGoodsId,
+                0,
+                $newLastUpdateCode
+            );
+        }
+
+        if ($goodsId !== null) {
+            $goodsUpdateStmt = $db->prepare(
+                'UPDATE goods SET last_update_code = :code WHERE id = :id'
+            );
+            $goodsUpdateStmt->execute([
+                ':code' => $newLastUpdateCode,
+                ':id' => $goodsId
+            ]);
+        }
+    }
+
     $db->commit();
+
+    $message = sprintf(
+        'Order list %d status set to %d; order total recalculated to %.2f.',
+        $orderListId,
+        $status,
+        $newTotal
+    );
+    if ($isAvailable === 0) {
+        $message .= ' Supplier goods marked unavailable and codes refreshed.';
+    }
 
     $respond(200, [
         'success' => true,
-        'message' => sprintf(
-            'Order list %d status set to %d; order total recalculated to %.2f.',
-            $orderListId,
-            $status,
-            $newTotal
-        )
+        'message' => $message
     ]);
 } catch (PDOException $exception) {
     if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
