@@ -73,6 +73,7 @@ try {
     $stmt = $db->prepare(
         'SELECT
             o.id AS order_id,
+            c.id AS customer_id,
             COALESCE(c.name, c.shop_name, "Unknown Customer") AS customer_name,
             o.total_price,
             c.phone,
@@ -148,6 +149,7 @@ try {
         'success' => true,
         'orders' => array_map(static fn($row) => [
             'orderId' => (int)$row['order_id'],
+            'customerId' => isset($row['customer_id']) ? (int)$row['customer_id'] : null,
             'customerName' => $row['customer_name'] ?? 'Unknown Customer',
             'totalPrice' => isset($row['total_price']) ? (float)$row['total_price'] : 0.0,
             'phone' => $row['phone'] ?? null,
