@@ -85,6 +85,26 @@
             font-size: 0.8rem;
             color: #6b7280;
         }
+
+        .audience-toggle .btn {
+            flex: 1 1 0;
+            transition: all 0.2s ease;
+        }
+
+        .audience-toggle .btn:hover {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .audience-toggle .btn-check:checked + .btn {
+            color: #fff;
+            background: linear-gradient(135deg, #3f51b5 0%, #6574da 100%);
+            border-color: transparent;
+            box-shadow: 0 0.25rem 0.75rem rgba(79, 70, 229, 0.25);
+        }
+
+        #allCustomersNotice {
+            border-radius: 0.75rem;
+        }
     </style>
 </head>
 <body>
@@ -163,11 +183,14 @@
                 <div class="card-body">
                     <div class="alert d-none" id="smsFeedback" role="alert"></div>
 
-                    <div class="empty-state py-4" id="noCustomerSelectedNotice">
-                        <i class="bi bi-person-lines-fill display-6 d-block mb-3 text-primary"></i>
-                        <p class="mb-0">
-                            Select a customer to auto-fill their phone number or type a new phone number below.
+                    <div class="empty-state py-4" id="modeHelper">
+                        <i class="bi bi-person-lines-fill display-6 d-block mb-3 text-primary" id="modeHelperIcon"></i>
+                        <p class="mb-1 fw-semibold" id="modeHelperTitle">
+                            Select a customer or type a phone number.
                         </p>
+                        <small class="text-muted d-block" id="modeHelperDescription">
+                            Start by choosing a customer from the list on the left or provide a manual phone number.
+                        </small>
                     </div>
 
                     <div id="selectedCustomerSummary" class="d-none mb-4">
@@ -199,7 +222,38 @@
                     </div>
 
                     <form id="smsForm" class="needs-validation" novalidate>
-                        <div class="mb-3">
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase d-block mb-2">
+                                Audience
+                            </label>
+                            <div class="btn-group audience-toggle" role="group" aria-label="SMS audience selector">
+                                <input type="radio" class="btn-check" name="audienceMode" id="audienceSingle"
+                                       value="single" checked>
+                                <label class="btn btn-outline-primary" for="audienceSingle">
+                                    <i class="bi bi-person me-1"></i>
+                                    Single customer
+                                </label>
+
+                                <input type="radio" class="btn-check" name="audienceMode" id="audienceAddress"
+                                       value="address">
+                                <label class="btn btn-outline-primary" for="audienceAddress">
+                                    <i class="bi bi-geo-alt me-1"></i>
+                                    Address group
+                                </label>
+
+                                <input type="radio" class="btn-check" name="audienceMode" id="audienceAll"
+                                       value="all">
+                                <label class="btn btn-outline-primary" for="audienceAll">
+                                    <i class="bi bi-megaphone me-1"></i>
+                                    All customers
+                                </label>
+                            </div>
+                            <div class="form-text form-text-muted" id="audienceHint">
+                                Pick a customer from the list or type a phone number manually.
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="singleRecipientFields">
                             <label for="recipientPhone" class="form-label">Recipient phone number</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-telephone"></i></span>
@@ -218,6 +272,21 @@
                             <div class="form-text form-text-muted">
                                 You can overwrite the phone number to reach a contact that is not in the list.
                             </div>
+                        </div>
+
+                        <div class="mb-3 d-none" id="addressSelectorWrapper">
+                            <label for="addressSelector" class="form-label">Choose address</label>
+                            <select class="form-select" id="addressSelector">
+                                <option value="">Select an address</option>
+                            </select>
+                            <div class="form-text form-text-muted">
+                                All customers registered under this address will receive the SMS.
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info d-none" id="allCustomersNotice">
+                            <i class="bi bi-megaphone-fill me-2"></i>
+                            This message will be sent to every customer with a valid phone number.
                         </div>
 
                         <div class="mb-3">
@@ -305,6 +374,7 @@
         const endpoints = {
             customersPrimary: '../api/customer/list.php',
             customersFallback: '../api/getOrder.php',
+            addresses: '../api/address/getAllAddress.php',
             sendSms: '../api/sms/sendSms.php'
         };
 
@@ -312,7 +382,9 @@
             customers: [],
             filteredCustomers: [],
             selectedCustomer: null,
-            fallbackMode: false
+            fallbackMode: false,
+            addresses: [],
+            audienceMode: 'single'
         };
 
         const $customerList = $('#customerList');
@@ -321,7 +393,10 @@
         const $selectionBadge = $('#selectionBadge');
         const $smsFeedback = $('#smsFeedback');
         const $clearSelectionBtn = $('#clearSelectionBtn');
-        const $noCustomerNotice = $('#noCustomerSelectedNotice');
+        const $modeHelper = $('#modeHelper');
+        const $modeHelperIcon = $('#modeHelperIcon');
+        const $modeHelperTitle = $('#modeHelperTitle');
+        const $modeHelperDescription = $('#modeHelperDescription');
         const $selectedCustomerSummary = $('#selectedCustomerSummary');
         const $recipientPhone = $('#recipientPhone');
         const $smsMessage = $('#smsMessage');
@@ -330,6 +405,12 @@
         const $sendSmsBtn = $('#sendSmsBtn');
         const $sendSmsSpinner = $('#sendSmsSpinner');
         const $sendSmsBtnText = $('#sendSmsBtnText');
+        const $audienceInputs = $('input[name="audienceMode"]');
+        const $audienceHint = $('#audienceHint');
+        const $singleRecipientFields = $('#singleRecipientFields');
+        const $addressWrapper = $('#addressSelectorWrapper');
+        const $addressSelect = $('#addressSelector');
+        const $allCustomersNotice = $('#allCustomersNotice');
 
         function showFeedback(type, message) {
             $smsFeedback
@@ -368,6 +449,22 @@
             return trimmed.replace(/\s+/g, '');
         }
 
+        function configureModeHelper(iconClass, title, description) {
+            $modeHelperIcon
+                .attr('class', `bi ${iconClass} display-6 d-block mb-3 text-primary`);
+            $modeHelperTitle.text(title);
+            $modeHelperDescription.text(description);
+        }
+
+        function getSelectedAddressName() {
+            const selectedId = Number($addressSelect.val());
+            if (!selectedId) {
+                return '';
+            }
+            const found = state.addresses.find((address) => address.id === selectedId);
+            return found ? found.name : '';
+        }
+
         function buildCustomerRecord(raw) {
             return {
                 id: Number(raw.id) || null,
@@ -388,6 +485,56 @@
                 }
             });
             return Array.from(map.values());
+        }
+
+        function fetchAddresses() {
+            return $.ajax({
+                url: endpoints.addresses,
+                method: 'GET',
+                dataType: 'json'
+            }).then((response) => {
+                if (Array.isArray(response)) {
+                    return response;
+                }
+                if (response && Array.isArray(response.addresses)) {
+                    return response.addresses;
+                }
+                return [];
+            });
+        }
+
+        function renderAddressOptions(addresses) {
+            $addressSelect.empty().append('<option value="">Select an address</option>');
+            addresses.forEach((address) => {
+                const option = $('<option></option>')
+                    .val(address.id)
+                    .text(address.name);
+                $addressSelect.append(option);
+            });
+            $addressSelect.prop('disabled', addresses.length === 0);
+        }
+
+        function loadAddresses() {
+            return fetchAddresses()
+                .done((addresses) => {
+                    state.addresses = addresses
+                        .map((address) => ({
+                            id: Number(address.addressId ?? address.id ?? 0),
+                            name: address.addressName || address.name || ''
+                        }))
+                        .filter((address) => address.id > 0 && address.name !== '');
+                    renderAddressOptions(state.addresses);
+                    $audienceInputs.filter('[value="address"]').prop('disabled', state.addresses.length === 0);
+                })
+                .fail(() => {
+                    state.addresses = [];
+                    renderAddressOptions([]);
+                    $audienceInputs.filter('[value="address"]').prop('disabled', true);
+                    showFeedback('warning', 'Unable to load addresses. Address-based SMS mode is temporarily disabled.');
+                    if (state.audienceMode === 'address') {
+                        setAudienceMode('single');
+                    }
+                });
         }
 
         function formatDate(isoString) {
@@ -433,7 +580,83 @@
             });
         }
 
+        function setAudienceMode(mode) {
+            if (!['single', 'address', 'all'].includes(mode)) {
+                mode = 'single';
+            }
+            state.audienceMode = mode;
+            $audienceInputs.prop('checked', false).filter(`[value="${mode}"]`).prop('checked', true);
+
+            const isSingle = mode === 'single';
+            const isAddress = mode === 'address';
+
+            $singleRecipientFields.toggleClass('d-none', !isSingle);
+            $addressWrapper.toggleClass('d-none', !isAddress);
+            $allCustomersNotice.toggleClass('d-none', mode !== 'all');
+            $recipientPhone.prop('disabled', !isSingle).prop('required', isSingle);
+            $addressSelect.prop('required', isAddress);
+
+            const hints = {
+                single: 'Pick a customer from the directory or type a phone number manually.',
+                address: 'Reach all customers mapped to a single address.',
+                all: 'Deliver the message to every registered customer.'
+            };
+            $audienceHint.text(hints[mode]);
+
+            if (!isSingle) {
+                state.selectedCustomer = null;
+                $customerList.find('.list-group-item').removeClass('active');
+                $recipientPhone.val('');
+            }
+
+            $clearSelectionBtn.prop('disabled', !isSingle);
+            updateSelectedCustomerSummary();
+        }
+
+        function updateModeHelper() {
+            if (state.audienceMode === 'single') {
+                if (state.selectedCustomer) {
+                    $modeHelper.addClass('d-none');
+                } else {
+                    configureModeHelper(
+                        'bi-person-lines-fill',
+                        'No customer selected',
+                        'Select a customer from the list or type a phone number manually.'
+                    );
+                    $modeHelper.removeClass('d-none');
+                }
+                return;
+            }
+
+            if (state.audienceMode === 'address') {
+                const name = getSelectedAddressName();
+                const hasSelection = name !== '';
+                configureModeHelper(
+                    'bi-geo-alt-fill',
+                    hasSelection ? `Address: ${name}` : 'Choose an address',
+                    hasSelection
+                        ? 'The SMS will be sent to every customer registered under this address.'
+                        : 'Select an address to target all customers mapped to it.'
+                );
+            } else {
+                configureModeHelper(
+                    'bi-megaphone-fill',
+                    'All customers selected',
+                    'The SMS will be delivered to every customer with a valid phone number.'
+                );
+            }
+            $modeHelper.removeClass('d-none');
+        }
+
         function updateSelectionBadge() {
+            if (state.audienceMode !== 'single') {
+                const badgeConfig = state.audienceMode === 'address'
+                    ? { className: 'badge bg-warning-subtle text-warning badge-pill', text: 'Mode: Address broadcast' }
+                    : { className: 'badge bg-danger-subtle text-danger badge-pill', text: 'Mode: All customers' };
+                $selectionBadge.removeClass().addClass(badgeConfig.className).text(badgeConfig.text);
+                return;
+            }
+
             if (state.selectedCustomer) {
                 const descriptor = state.selectedCustomer.id !== null
                     ? `Customer #${state.selectedCustomer.id}`
@@ -442,32 +665,29 @@
                     .removeClass()
                     .addClass('badge bg-success-subtle text-success badge-pill')
                     .text(descriptor);
-                $clearSelectionBtn.prop('disabled', false);
             } else {
                 $selectionBadge
                     .removeClass()
                     .addClass('badge bg-light text-dark badge-pill')
-                    .text('No customer selected');
-                $clearSelectionBtn.prop('disabled', true);
+                    .text('Single customer mode');
             }
         }
 
         function updateSelectedCustomerSummary() {
-            if (state.selectedCustomer) {
+            if (state.audienceMode === 'single' && state.selectedCustomer) {
                 $('#summaryCustomerName').text(state.selectedCustomer.name || '—');
                 $('#summaryCustomerShop').text(state.selectedCustomer.shop || '—');
                 $('#summaryCustomerPhone').text(state.selectedCustomer.phone || '—');
                 $('#summaryCustomerId').text(state.selectedCustomer.id !== null ? `ID #${state.selectedCustomer.id}` : 'ID —');
                 $selectedCustomerSummary.removeClass('d-none');
-                $noCustomerNotice.addClass('d-none');
                 const normalised = normalisePhone(state.selectedCustomer.phone);
                 if (normalised) {
                     $recipientPhone.val(normalised);
                 }
             } else {
                 $selectedCustomerSummary.addClass('d-none');
-                $noCustomerNotice.removeClass('d-none');
             }
+            updateModeHelper();
             updateSelectionBadge();
         }
 
@@ -578,7 +798,8 @@
             formElement.classList.remove('was-validated');
             state.selectedCustomer = null;
             $customerList.find('.list-group-item').removeClass('active');
-            updateSelectedCustomerSummary();
+            $addressSelect.val('');
+            setAudienceMode('single');
             updateMessageStats();
         }
 
@@ -609,16 +830,21 @@
             return deferred.promise();
         }
 
-        function normalisePayload(phone, message, senderName) {
+        function buildPayload(message, senderName) {
             const payload = {
-                phone,
+                mode: state.audienceMode,
                 message
             };
             if (senderName) {
                 payload.sender = senderName;
             }
-            if (state.selectedCustomer && state.selectedCustomer.id !== null) {
-                payload.customerId = state.selectedCustomer.id;
+            if (state.audienceMode === 'single') {
+                payload.phone = normalisePhone($recipientPhone.val());
+                if (state.selectedCustomer && state.selectedCustomer.id !== null) {
+                    payload.customerId = state.selectedCustomer.id;
+                }
+            } else if (state.audienceMode === 'address') {
+                payload.addressId = Number($addressSelect.val());
             }
             return payload;
         }
@@ -629,6 +855,10 @@
             });
 
             $customerList.on('click', '.list-group-item', function () {
+                if (state.audienceMode !== 'single') {
+                    showFeedback('info', 'Switch to "Single customer" mode to pick an individual recipient.');
+                    return;
+                }
                 const index = Number($(this).data('index'));
                 if (!Number.isInteger(index)) {
                     return;
@@ -652,9 +882,20 @@
             });
 
             $clearSelectionBtn.on('click', () => {
+                if (state.audienceMode !== 'single') {
+                    return;
+                }
                 state.selectedCustomer = null;
                 $customerList.find('.list-group-item').removeClass('active');
                 updateSelectedCustomerSummary();
+            });
+
+            $audienceInputs.on('change', function () {
+                setAudienceMode($(this).val());
+            });
+
+            $addressSelect.on('change', () => {
+                updateModeHelper();
             });
 
             $('#resetFormBtn').on('click', () => {
@@ -673,15 +914,8 @@
                 }
                 form.classList.remove('was-validated');
 
-                const phone = normalisePhone($recipientPhone.val());
                 const message = ($smsMessage.val() || '').trim();
                 const senderName = ($('#smsSenderName').val() || '').trim();
-
-                if (!phone) {
-                    showFeedback('warning', 'Provide a valid recipient phone number.');
-                    $recipientPhone.trigger('focus');
-                    return;
-                }
 
                 if (!message) {
                     showFeedback('warning', 'Write the SMS content before sending.');
@@ -689,21 +923,44 @@
                     return;
                 }
 
-                const payload = normalisePayload(phone, message, senderName);
+                if (state.audienceMode === 'single') {
+                    const phone = normalisePhone($recipientPhone.val());
+                    if (!phone) {
+                        showFeedback('warning', 'Provide a valid recipient phone number.');
+                        $recipientPhone.trigger('focus');
+                        return;
+                    }
+                } else if (state.audienceMode === 'address') {
+                    if (!$addressSelect.val()) {
+                        showFeedback('warning', 'Choose an address to target before sending the SMS.');
+                        $addressSelect.trigger('focus');
+                        return;
+                    }
+                }
+
+                const payload = buildPayload(message, senderName);
 
                 setSendingState(true);
                 sendSmsRequest(payload)
                     .done((response) => {
                         if (response && response.success) {
-                            showFeedback('success', response.message || 'SMS sent successfully.');
+                            const targeted = response && response.payload ? response.payload.targeted : undefined;
+                            const phone = response && response.payload ? response.payload.phone : undefined;
+                            let detail = '';
+                            if (typeof targeted === 'number') {
+                                detail = ` (${targeted} recipient${targeted === 1 ? '' : 's'})`;
+                            } else if (phone) {
+                                detail = ` (${phone})`;
+                            }
+                            showFeedback('success', `${response.message || 'SMS sent successfully.'}${detail}`);
                             clearForm();
                         } else {
-                            showFeedback('warning', response?.message || 'SMS may not have been sent. Please verify.');
+                            showFeedback('warning', (response && response.message) || 'SMS may not have been sent. Please verify.');
                         }
                     })
                     .fail((error) => {
-                        const messageText = error?.responseJSON?.message
-                            || error?.statusText
+                        const messageText = (error && error.responseJSON && error.responseJSON.message)
+                            || (error && error.statusText)
                             || 'Unable to reach the SMS service.';
                         showFeedback('danger', messageText);
                     })
@@ -716,7 +973,9 @@
         $(document).ready(() => {
             initialiseEventHandlers();
             updateMessageStats();
+            setAudienceMode('single');
             loadCustomers();
+            loadAddresses();
         });
     })(jQuery);
 </script>
