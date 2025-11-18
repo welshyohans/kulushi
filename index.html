@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>MerKato Pro — Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#2b59ff">
+    <link rel="manifest" href="manifest.webmanifest">
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
@@ -28,6 +30,7 @@
             background: var(--surface-gradient);
             color: #1b2540;
             padding-bottom: 80px;
+            overflow-x: hidden;
         }
 
         main {
@@ -122,8 +125,9 @@
 
         .goods-grid {
             display: grid;
-            gap: 1.25rem;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            width: 100%;
         }
 
         .goods-card {
@@ -133,6 +137,7 @@
             background: #fff;
             display: flex;
             flex-direction: column;
+            height: 100%;
             box-shadow: 0 18px 36px -28px rgba(17, 34, 85, 0.45);
             transition: transform 0.18s ease, box-shadow 0.18s ease;
         }
@@ -409,8 +414,21 @@
         }
 
         @media (max-width: 575.98px) {
+            body {
+                padding-bottom: 90px;
+            }
+
+            .goods-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.75rem;
+            }
+
+            .goods-card {
+                min-width: 0;
+            }
+
             .goods-card img {
-                height: 160px;
+                height: 140px;
             }
         }
     </style>
@@ -429,28 +447,30 @@
             </div>
         </div>
 
-        <div class="d-flex align-items-center justify-content-between gap-3">
-            <div class="d-flex align-items-center gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3 order-1 flex-grow-1 flex-lg-grow-0">
                 <span class="brand">Merkato Pro</span>
                 <span class="badge text-bg-light d-none d-lg-inline-flex">
                     <i class="bi bi-person-check me-1"></i>
                     <span id="customerNameBadge">Loading…</span>
                 </span>
             </div>
-            <div class="d-none d-lg-flex flex-grow-1 align-items-center gap-3">
+            <div class="flex-grow-1 order-2 w-100 w-lg-auto">
                 <div class="input-group">
                     <span class="input-group-text bg-transparent border-end-0">
                         <i class="bi bi-search"></i>
                     </span>
                     <input type="search" class="form-control border-start-0" placeholder="Search goods…" id="globalSearchInput" aria-label="Search goods">
                 </div>
+            </div>
+            <div class="d-none d-lg-flex align-items-center gap-3 order-3 ms-lg-auto">
                 <button class="btn btn-outline-primary position-relative" id="cartBtn" data-bs-toggle="modal" data-bs-target="#cartModal">
                     <i class="bi bi-cart3 me-2"></i>
                     Cart
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cartCountBadge">0</span>
                 </button>
             </div>
-            <div class="d-flex d-lg-none align-items-center gap-3">
+            <div class="d-flex d-lg-none align-items-center gap-3 ms-auto order-4">
                 <button class="btn btn-outline-primary position-relative" id="cartBtnMobile" data-bs-toggle="modal" data-bs-target="#cartModal" aria-label="Open cart">
                     <i class="bi bi-cart3 fs-5"></i>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cartCountBadgeMobile">0</span>
@@ -792,6 +812,7 @@
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
     crossorigin="anonymous"
 ></script>
+<script src="pwa.js"></script>
 <script type="module">
     const sessionKey = 'mproSession';
     const cartKey = 'mproCartItems';
@@ -1192,13 +1213,12 @@
         if (!elements.loadMoreGoodsBtn) return;
         const context = state.pagination.context;
         const isSupplierContext = context === 'supplier';
-        elements.loadMoreGoodsBtn.classList.toggle('d-none', isSupplierContext);
-        const hasMore = state.pagination.hasMore[context];
-        elements.loadMoreGoodsBtn.disabled = state.isLoadingGoods || !hasMore;
-        if (hasMore) {
+        const hasMore = state.pagination.hasMore[context] !== false;
+        const shouldShow = !isSupplierContext && hasMore;
+        elements.loadMoreGoodsBtn.classList.toggle('d-none', !shouldShow);
+        elements.loadMoreGoodsBtn.disabled = state.isLoadingGoods;
+        if (!state.isLoadingGoods) {
             elements.loadMoreGoodsBtn.innerHTML = loadMoreDefaultLabel;
-        } else {
-            elements.loadMoreGoodsBtn.innerHTML = '<i class="bi bi-check2-circle me-2"></i>No more goods';
         }
     }
 
@@ -1254,13 +1274,14 @@
             if (context === 'supplier') {
                 newGoods = transformSupplierGoods(response);
                 state.pagination.hasMore.supplier = false;
-            } else if (newGoods.length < limit) {
+            } else if (newGoods.length === 0) {
                 state.pagination.hasMore[context] = false;
             } else {
                 state.pagination.hasMore[context] = true;
             }
 
             if (append && newGoods.length === 0) {
+                state.pagination.hasMore[context] = false;
                 showToast({ title: 'All caught up', body: 'No more goods available for now.', variant: 'info' });
                 return;
             }
@@ -1639,7 +1660,8 @@
 
         const newQuantity = item.quantity + delta;
         if (newQuantity < item.minOrder) {
-            showToast({ title: 'Minimum order', body: `Minimum order is ${item.minOrder}.`, variant: 'warning' });
+            removeCartItem(goodsId, supplierGoodsId);
+            showToast({ title: 'Item removed', body: `${item.name || 'Goods'} removed from cart.`, variant: 'info' });
             return;
         }
         item.quantity = newQuantity;

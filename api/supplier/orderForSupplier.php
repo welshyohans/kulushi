@@ -215,10 +215,10 @@ try {
             $sms->sendSms(
                 $supplierPhone,
                 sprintf(
-                    "Merkato Pro: New shop order #%d. Total ETB %s. %s",
+                    "Merkato Pro: New shop order #%d. Total ETB %s.\n%s",
                     $supplierOrderId,
                     number_format($calculatedTotal, 2, '.', ','),
-                    implode(', ', $summaryParts)
+                    implode("\n", $summaryParts)
                 )
             );
         }
