@@ -128,8 +128,8 @@
 
         .goods-grid {
             display: grid;
-            gap: 1rem;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 0.9rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             width: 100%;
             max-width: 100%;
         }
@@ -447,30 +447,31 @@
             }
         }
 
-        @media (max-width: 575.98px) {
+        @media (max-width: 767.98px) {
             body {
                 padding-bottom: 90px;
             }
 
             .goods-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 0.75rem;
+                grid-template-columns: 1fr;
+                gap: 0.85rem;
             }
 
             .goods-card {
                 min-width: 0;
+                max-width: 100%;
             }
 
             .goods-card img {
-                aspect-ratio: 3 / 4;
+                height: auto;
             }
 
             .goods-card .card-body {
                 padding: 0.75rem 0.85rem 1rem;
             }
 
-            .goods-card .h5 {
-                font-size: 0.95rem;
+            .goods-card .actions {
+                flex-direction: column;
             }
 
             .goods-card .price-tag {
