@@ -129,7 +129,7 @@
         .goods-grid {
             display: grid;
             gap: 1rem;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             width: 100%;
             max-width: 100%;
         }
@@ -147,6 +147,14 @@
             min-width: 0;
         }
 
+        .goods-card button {
+            border: none;
+            background: none;
+            padding: 0;
+            display: block;
+            width: 100%;
+        }
+
         .goods-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 22px 42px -28px rgba(17, 34, 85, 0.6);
@@ -154,8 +162,10 @@
 
         .goods-card img {
             width: 100%;
+            height: auto;
             aspect-ratio: 3 / 4;
-            object-fit: cover;
+            object-fit: contain;
+            background: linear-gradient(180deg, rgba(243, 246, 255, 0.7), rgba(220, 227, 255, 0.9));
         }
 
         .goods-card .card-body {
