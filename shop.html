@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <title>MerKato Pro — Supplier shop</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
+    >
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+    <style>
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #f5f7ff, #eef1ff 50%, #e6ecff 100%);
+        }
+
+        .topbar {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(15, 32, 98, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .goods-card img {
+            height: 160px;
+            object-fit: cover;
+            border-radius: 0.75rem;
+        }
+
+        .goods-card {
+            border: 1px solid rgba(15, 32, 98, 0.08);
+            border-radius: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.95);
+            height: 100%;
+        }
+
+        .cart-panel {
+            border-radius: 1rem;
+            border: 1px solid rgba(15, 32, 98, 0.08);
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 10px 30px -25px rgba(17, 45, 115, 0.6);
+        }
+
+        .toast-container {
+            z-index: 1080;
+        }
+
+        @media (max-width: 991.98px) {
+            .cart-panel {
+                position: sticky;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                border-radius: 1rem 1rem 0 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar py-3">
+    <div class="container d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+            <div class="text-uppercase text-muted small mb-1">Supplier shop</div>
+            <h1 class="h4 mb-0" id="shopName">Loading…</h1>
+            <div class="text-muted small" id="shopMeta"></div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="index.html" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-house-door me-1"></i>Dashboard
+            </a>
+            <a id="shopPhoneLink" class="btn btn-primary btn-sm" href="#">
+                <i class="bi bi-telephone me-1"></i>Call supplier
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="container py-4">
+    <div class="alert alert-warning d-none" id="shopAlert" role="alert"></div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="row g-3" id="goodsList">
+                <div class="col-12">
+                    <div class="text-center py-5 text-muted">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-3 mb-0">Loading goods…</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="cart-panel p-3" id="cartPanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h2 class="h6 mb-0">Cart</h2>
+                        <small class="text-muted">Items selected from this supplier</small>
+                    </div>
+                    <span class="badge text-bg-primary" id="cartItemCount">0 items</span>
+                </div>
+                <div id="cartItems" class="d-flex flex-column gap-3"></div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="text-muted">Total</div>
+                    <div class="fw-semibold h5 mb-0" id="cartTotal">ETB 0.00</div>
+                </div>
+                <button class="btn btn-primary w-100" id="placeOrderBtn" disabled>
+                    <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="orderSpinner"></span>
+                    Place order
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"
+></script>
+<script>
+    (function () {
+        const sessionKey = 'mproSession';
+        const API = {
+            supplierGoods: (id) => `api/dashboard/getGoodsBySupplier.php?supplierId=${encodeURIComponent(id)}`,
+            supplierOrder: 'api/supplier/orderForSupplier.php'
+        };
+
+        const elements = {
+            goodsList: document.getElementById('goodsList'),
+            shopName: document.getElementById('shopName'),
+            shopMeta: document.getElementById('shopMeta'),
+            shopPhoneLink: document.getElementById('shopPhoneLink'),
+            shopAlert: document.getElementById('shopAlert'),
+            cartItems: document.getElementById('cartItems'),
+            cartTotal: document.getElementById('cartTotal'),
+            cartItemCount: document.getElementById('cartItemCount'),
+            placeOrderBtn: document.getElementById('placeOrderBtn'),
+            orderSpinner: document.getElementById('orderSpinner'),
+            toastContainer: document.getElementById('toastContainer')
+        };
+
+        const state = {
+            session: null,
+            supplierId: null,
+            supplier: null,
+            goods: [],
+            cart: []
+        };
+
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        function getSession() {
+            try {
+                const raw = localStorage.getItem(sessionKey);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed.customerId === 'number' && parsed.customerId > 0) {
+                    return parsed;
+                }
+            } catch (err) {
+                console.error('Session parse error', err);
+            }
+            return null;
+        }
+
+        function ensureSession() {
+            const session = getSession();
+            if (!session) {
+                sessionStorage.setItem('mproRedirect', window.location.pathname + window.location.search);
+                window.location.href = 'login.html';
+                return null;
+            }
+            return session;
+        }
+
+        function showAlert(message, variant = 'warning') {
+            elements.shopAlert.textContent = message;
+            elements.shopAlert.classList.remove('d-none', 'alert-warning', 'alert-danger', 'alert-success');
+            elements.shopAlert.classList.add(`alert-${variant}`);
+        }
+
+        function showToastMessage({ title = 'Notice', body = '', variant = 'primary' }) {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+                <div class="toast text-bg-${variant} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong class="d-block mb-1">${title}</strong>
+                            ${body}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            const toastEl = wrapper.firstElementChild;
+            elements.toastContainer.appendChild(toastEl);
+            const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+            toast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        function fetchJson(url, options) {
+            return fetch(url, options).then(async (response) => {
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.message || `Request failed with status ${response.status}`);
+                }
+                return payload;
+            });
+        }
+
+        function formatCurrency(value) {
+            const amount = Number(value) || 0;
+            return `ETB ${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        }
+
+        function renderGoods() {
+            if (state.goods.length === 0) {
+                elements.goodsList.innerHTML = `
+                    <div class="col-12">
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-shop-window fs-1 d-block mb-3"></i>
+                            <p class="mb-0">This supplier has no goods listed yet.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            elements.goodsList.innerHTML = state.goods.map(goods => {
+                const cartItem = state.cart.find(item => item.goodsId === goods.goodsId);
+                const minOrder = goods.minOrder || 1;
+                const price = goods.displayPrice;
+                return `
+                    <div class="col-sm-6">
+                        <div class="goods-card h-100 d-flex flex-column gap-3">
+                            <img src="${goods.imageUrl || 'https://via.placeholder.com/300'}" alt="${goods.name}">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h3 class="h6 mb-0">${goods.name || 'Goods'}</h3>
+                                    <span class="badge text-bg-light">${goods.categoryName || ''}</span>
+                                </div>
+                                <div class="text-muted small">Min order ${minOrder}</div>
+                            </div>
+                            <div class="fw-bold fs-5 text-primary">${formatCurrency(price)}</div>
+                            ${cartItem ? renderQuantityControl(goods.goodsId, cartItem) : `
+                                <button class="btn btn-outline-primary w-100" data-action="add-to-cart" data-goods-id="${goods.goodsId}">
+                                    <i class="bi bi-cart-plus me-1"></i>Add to cart
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderQuantityControl(goodsId, cartItem) {
+            return `
+                <div class="d-flex align-items-center gap-2" data-qty-control="${goodsId}">
+                    <button class="btn btn-outline-primary btn-sm" data-action="decrease" data-goods-id="${goodsId}">
+                        <i class="bi bi-dash-lg"></i>
+                    </button>
+                    <div class="flex-grow-1 text-center">
+                        <div class="fw-semibold">${cartItem.quantity}</div>
+                        <small class="text-muted">Min ${cartItem.minOrder}</small>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" data-action="increase" data-goods-id="${goodsId}">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderCart() {
+            if (state.cart.length === 0) {
+                elements.cartItems.innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-cart-x fs-3 d-block mb-2"></i>
+                        No items yet.
+                    </div>
+                `;
+                elements.placeOrderBtn.disabled = true;
+                elements.cartItemCount.textContent = '0 items';
+                elements.cartTotal.textContent = 'ETB 0.00';
+                return;
+            }
+
+            elements.cartItems.innerHTML = state.cart.map(item => `
+                <div class="d-flex justify-content-between align-items-center border rounded-3 p-2" data-cart-goods="${item.goodsId}">
+                    <div>
+                        <div class="fw-semibold">${item.name}</div>
+                        <small class="text-muted">Qty: ${item.quantity}</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-semibold">${formatCurrency(item.price * item.quantity)}</div>
+                        <div class="btn-group btn-group-sm mt-1" role="group">
+                            <button class="btn btn-outline-primary" data-action="decrease-cart" data-goods-id="${item.goodsId}">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <button class="btn btn-outline-primary" data-action="increase-cart" data-goods-id="${item.goodsId}">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" data-action="remove-cart" data-goods-id="${item.goodsId}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const totalItems = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            elements.cartItemCount.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'items'}`;
+            elements.cartTotal.textContent = formatCurrency(totalPrice);
+            elements.placeOrderBtn.disabled = false;
+        }
+
+        function syncGoodsWithCart() {
+            renderGoods();
+            renderCart();
+        }
+
+        function addToCart(goodsId) {
+            const goods = state.goods.find(item => item.goodsId === goodsId);
+            if (!goods) return;
+            const existing = state.cart.find(item => item.goodsId === goodsId);
+            if (existing) {
+                existing.quantity += goods.minOrder;
+            } else {
+                state.cart.push({
+                    goodsId: goods.goodsId,
+                    name: goods.name,
+                    minOrder: goods.minOrder,
+                    quantity: goods.minOrder,
+                    price: goods.displayPrice,
+                    goodsRawId: goods.supplierGoodsId
+                });
+            }
+            syncGoodsWithCart();
+        }
+
+        function updateCartQuantity(goodsId, delta) {
+            const item = state.cart.find(entry => entry.goodsId === goodsId);
+            if (!item) return;
+            const newQty = item.quantity + delta;
+            if (newQty < item.minOrder) {
+                showToastMessage({ title: 'Minimum order', body: `Minimum order is ${item.minOrder}.`, variant: 'warning' });
+                return;
+            }
+            item.quantity = newQty;
+            syncGoodsWithCart();
+        }
+
+        function removeCartItem(goodsId) {
+            state.cart = state.cart.filter(item => item.goodsId !== goodsId);
+            syncGoodsWithCart();
+        }
+
+        async function fetchSupplierGoods() {
+            if (!state.supplierId) {
+                showAlert('Missing supplierId in the URL.', 'danger');
+                elements.goodsList.innerHTML = '';
+                return;
+            }
+            elements.goodsList.innerHTML = `
+                <div class="col-12">
+                    <div class="text-center py-5 text-muted">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-3 mb-0">Loading goods…</p>
+                    </div>
+                </div>
+            `;
+            const payload = await fetchJson(API.supplierGoods(state.supplierId));
+            state.supplier = payload.supplier;
+            const goods = Array.isArray(payload.goods) ? payload.goods : [];
+            state.goods = goods.map(item => {
+                const basePrice = Number(item.discountPrice) > 0 ? Number(item.discountPrice) : Number(item.price || 0);
+                return {
+                    goodsId: item.goodsId,
+                    name: item.name,
+                    imageUrl: item.imageUrl,
+                    categoryName: item.categoryName,
+                    minOrder: item.minOrder || 1,
+                    displayPrice: basePrice,
+                    supplierGoodsId: item.supplierGoodsId
+                };
+            });
+            updateSupplierHeader();
+            syncGoodsWithCart();
+        }
+
+        function updateSupplierHeader() {
+            if (!state.supplier) return;
+            elements.shopName.textContent = state.supplier.shopName || 'Supplier shop';
+            const details = [
+                state.supplier.shopType || '',
+                state.supplier.phone ? `Phone: ${state.supplier.phone}` : ''
+            ].filter(Boolean).join(' · ');
+            elements.shopMeta.textContent = details;
+            if (state.supplier.phone) {
+                elements.shopPhoneLink.href = `tel:${state.supplier.phone}`;
+            } else {
+                elements.shopPhoneLink.classList.add('disabled');
+                elements.shopPhoneLink.setAttribute('aria-disabled', 'true');
+            }
+        }
+
+        async function placeOrder() {
+            if (state.cart.length === 0) return;
+            elements.placeOrderBtn.disabled = true;
+            elements.orderSpinner.classList.remove('d-none');
+            const totalPrice = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const payload = {
+                customerId: state.session.customerId,
+                supplierId: Number(state.supplierId),
+                totalPrice,
+                orderTime: new Date().toISOString(),
+                comment: `Shop order via web — ${state.cart.length} items`,
+                supplierOrderLists: state.cart.map((item, index) => ({
+                    orderId: index + 1,
+                    goodsId: item.goodsId,
+                    quantity: item.quantity,
+                    price: item.price
+                }))
+            };
+            try {
+                const response = await fetch(API.supplierOrder, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status !== 'success') {
+                    throw new Error(result.message || 'Failed to place order.');
+                }
+                showToastMessage({ title: 'Order submitted', body: 'We notified the supplier via SMS.', variant: 'success' });
+                state.cart = [];
+                syncGoodsWithCart();
+            } catch (error) {
+                console.error('Supplier order failed', error);
+                showToastMessage({ title: 'Order failed', body: error.message || 'Unable to place order.', variant: 'danger' });
+            } finally {
+                elements.placeOrderBtn.disabled = state.cart.length === 0;
+                elements.orderSpinner.classList.add('d-none');
+            }
+        }
+
+        function attachEventListeners() {
+            elements.goodsList.addEventListener('click', (event) => {
+                const addBtn = event.target.closest('[data-action="add-to-cart"]');
+                if (addBtn) {
+                    const goodsId = Number(addBtn.dataset.goodsId);
+                    addToCart(goodsId);
+                    return;
+                }
+                const qtyBtn = event.target.closest('[data-action="increase"], [data-action="decrease"]');
+                if (qtyBtn) {
+                    const goodsId = Number(qtyBtn.dataset.goodsId);
+                    const goods = state.goods.find(item => item.goodsId === goodsId);
+                    if (!goods) return;
+                    const delta = qtyBtn.dataset.action === 'increase' ? goods.minOrder : -goods.minOrder;
+                    updateCartQuantity(goodsId, delta);
+                }
+            });
+
+            elements.cartItems.addEventListener('click', (event) => {
+                const actionBtn = event.target.closest('[data-action]');
+                if (!actionBtn) return;
+                const goodsId = Number(actionBtn.dataset.goodsId);
+                if (actionBtn.dataset.action === 'increase-cart') {
+                    const goods = state.goods.find(item => item.goodsId === goodsId);
+                    updateCartQuantity(goodsId, goods?.minOrder || 1);
+                } else if (actionBtn.dataset.action === 'decrease-cart') {
+                    const goods = state.goods.find(item => item.goodsId === goodsId);
+                    updateCartQuantity(goodsId, -(goods?.minOrder || 1));
+                } else if (actionBtn.dataset.action === 'remove-cart') {
+                    removeCartItem(goodsId);
+                }
+            });
+
+            elements.placeOrderBtn.addEventListener('click', placeOrder);
+        }
+
+        async function init() {
+            state.session = ensureSession();
+            if (!state.session) return;
+            const supplierId = getQueryParam('supplierId');
+            if (!supplierId) {
+                showAlert('No supplierId provided in URL.', 'danger');
+                return;
+            }
+            state.supplierId = Number(supplierId);
+            attachEventListeners();
+            try {
+                await fetchSupplierGoods();
+            } catch (error) {
+                console.error('Failed to load supplier goods', error);
+                showAlert(error.message || 'Unable to load supplier goods.', 'danger');
+            }
+        }
+
+        init();
+    })();
+</script>
+</body>
+</html>

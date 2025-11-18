@@ -41,6 +41,7 @@ try {
             g.show_in_home,
             g.image_url,
             g.category_id,
+            g.commission,
             c.name AS category_name
         FROM goods g
         LEFT JOIN category c ON c.id = g.category_id
@@ -85,7 +86,7 @@ try {
         INNER JOIN supplier s ON s.shop_id = sg.supplier_id
         WHERE sg.is_available = 1
           AND sg.goods_id IN ($placeholders)
-        ORDER BY sg.goods_id ASC, sg.price ASC"
+        ORDER BY sg.goods_id ASC, sg.min_order ASC, sg.price ASC"
     );
     $offersStmt->execute($goodsIds);
     $offers = $offersStmt->fetchAll();
@@ -118,6 +119,11 @@ try {
     foreach ($goodsRows as $row) {
         $goodsId = (int)$row['goods_id'];
         $supplierOffers = $offerMap[$goodsId] ?? [];
+
+        if (count($supplierOffers) === 0) {
+            continue;
+        }
+
         $primarySupplier = $supplierOffers[0] ?? null;
 
         $responseGoods[] = [
@@ -129,6 +135,7 @@ try {
             'imageUrl' => $row['image_url'] ?? '',
             'categoryId' => isset($row['category_id']) ? (int)$row['category_id'] : null,
             'categoryName' => $row['category_name'] ?? '',
+            'commission' => isset($row['commission']) ? (float)$row['commission'] : 0.0,
             'lowestPrice' => $primarySupplier ? $primarySupplier['price'] : null,
             'supplierName' => $primarySupplier['shopName'] ?? '',
             'primarySupplier' => $primarySupplier,

@@ -76,12 +76,13 @@ try {
             g.description,
             g.image_url,
             g.priority,
+            g.commission,
             c.name AS category_name
         FROM supplier_goods sg
         INNER JOIN goods g ON g.id = sg.goods_id
         LEFT JOIN category c ON c.id = g.category_id
         WHERE sg.supplier_id = :supplierId AND sg.is_available = 1
-        ORDER BY g.priority DESC, sg.price ASC'
+        ORDER BY g.priority DESC, sg.min_order ASC, sg.price ASC'
     );
     $goodsStmt->execute([':supplierId' => $supplierId]);
     $rows = $goodsStmt->fetchAll();
@@ -95,6 +96,7 @@ try {
             'description' => $row['description'] ?? '',
             'imageUrl' => $row['image_url'] ?? '',
             'categoryName' => $row['category_name'] ?? '',
+            'commission' => isset($row['commission']) ? (float)$row['commission'] : 0.0,
             'price' => isset($row['price']) ? (float)$row['price'] : null,
             'discountPrice' => isset($row['discount_price']) ? (float)$row['discount_price'] : null,
             'discountStart' => isset($row['discount_start']) ? (int)$row['discount_start'] : null,

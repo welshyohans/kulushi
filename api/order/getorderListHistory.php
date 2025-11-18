@@ -80,7 +80,7 @@ try {
         LEFT JOIN goods g ON g.id = ol.goods_id
         LEFT JOIN supplier_goods sg ON sg.id = ol.supplier_goods_id
         LEFT JOIN supplier s ON s.shop_id = sg.supplier_id
-        WHERE ol.orders_id = :orderId
+        WHERE ol.orders_id = :orderId AND ol.status != -1
         ORDER BY ol.id ASC'
     );
     $itemsStmt->execute([':orderId' => $orderId]);

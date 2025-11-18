@@ -68,7 +68,8 @@ try {
         FROM supplier_goods sg
         INNER JOIN supplier s ON s.shop_id = sg.supplier_id
         WHERE sg.goods_id = :goodsId
-        ORDER BY sg.price ASC'
+          AND sg.is_available = 1
+        ORDER BY sg.min_order ASC, sg.price ASC'
     );
     $stmt->execute([':goodsId' => $goodsId]);
     $rows = $stmt->fetchAll();

@@ -27,6 +27,11 @@
             min-height: 100vh;
             background: var(--surface-gradient);
             color: #1b2540;
+            padding-bottom: 80px;
+        }
+
+        main {
+            padding-bottom: 2rem;
         }
 
         .page-shell {
@@ -81,7 +86,7 @@
 
         .layout {
             display: grid;
-            grid-template-columns: 280px 1fr;
+            grid-template-columns: 1fr;
             gap: 1.5rem;
         }
 
@@ -256,11 +261,12 @@
         .mobile-bottom-nav {
             background: rgba(255, 255, 255, 0.96);
             border-top: 1px solid rgba(15, 32, 90, 0.1);
-            position: sticky;
+            position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            z-index: 1020;
+            z-index: 1040;
+            box-shadow: 0 -6px 24px -18px rgba(15, 32, 90, 0.4);
         }
 
         .mobile-bottom-nav .nav-link {
@@ -340,6 +346,31 @@
             color: #6b7498;
         }
 
+        .profile-summary {
+            border: 1px solid var(--border-soft);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            background: rgba(255, 255, 255, 0.92);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .profile-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .register-friend-modal .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .register-friend-modal .form-control:disabled {
+            cursor: not-allowed;
+        }
+
         .skeleton {
             display: inline-block;
             border-radius: 0.75rem;
@@ -354,16 +385,26 @@
         }
 
         @media (max-width: 991.98px) {
-            .layout {
-                grid-template-columns: 1fr;
-            }
-
             .side-nav {
                 display: none;
             }
 
             .topbar {
                 padding-bottom: 0.5rem;
+            }
+        }
+
+        @media (min-width: 992px) {
+            body {
+                padding-bottom: 0;
+            }
+
+            .layout {
+                grid-template-columns: 280px minmax(0, 1fr);
+            }
+
+            .mobile-bottom-nav {
+                display: none;
             }
         }
 
@@ -512,6 +553,25 @@
                     </button>
                 </header>
 
+                <div class="profile-summary mb-4">
+                    <div>
+                        <div class="text-uppercase text-muted small">Signed in as</div>
+                        <div class="h5 fw-bold mb-1" id="profileSummaryName">Loading…</div>
+                        <div class="text-muted mb-1" id="profileSummaryShop">—</div>
+                        <div class="fw-semibold" id="profileSummaryPhone">—</div>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-primary flex-grow-1" id="registerFriendBtn">
+                            <i class="bi bi-person-plus-fill me-2"></i>
+                            Register your friend
+                        </button>
+                        <button class="btn btn-outline-primary flex-grow-1" id="orderHistoryBtn">
+                            <i class="bi bi-clock-history me-2"></i>
+                            Order history
+                        </button>
+                    </div>
+                </div>
+
                 <div class="row g-3" id="profileInfoGrid"></div>
             </section>
         </section>
@@ -594,6 +654,58 @@
             <div class="modal-body">
                 <div class="options-list" id="optionsList"></div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Register friend Modal -->
+<div class="modal fade modal-rounded register-friend-modal" id="registerFriendModal" tabindex="-1" aria-labelledby="registerFriendModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="registerFriendForm" novalidate>
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5 text-primary" id="registerFriendModalLabel">
+                        <i class="bi bi-person-plus-fill me-2"></i>
+                        Register your friend
+                    </h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="registerFriendFeedback" class="alert d-none" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label" for="friendNameInput">Friend name</label>
+                        <input type="text" class="form-control" id="friendNameInput" name="name" placeholder="Enter full name" required>
+                        <div class="invalid-feedback">Name is required.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="friendShopInput">Shop name</label>
+                        <input type="text" class="form-control" id="friendShopInput" name="shopName" placeholder="e.g. Abeba Mini" required>
+                        <div class="invalid-feedback">Shop name is required.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="friendPhoneInput">Phone number</label>
+                        <input type="tel" class="form-control" id="friendPhoneInput" name="phone" placeholder="09xxxxxxxx" required>
+                        <div class="invalid-feedback">Enter a valid phone number.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="friendAddressSelect">Delivery address</label>
+                        <select class="form-select" id="friendAddressSelect" name="addressId" required disabled>
+                            <option value="">Loading addresses…</option>
+                        </select>
+                        <div class="invalid-feedback">Select an address.</div>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        We'll create a 4-digit password automatically and send it to your friend's phone once registered.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="registerFriendSubmitBtn">
+                        <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="registerFriendSpinner"></span>
+                        Submit registration
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -695,7 +807,9 @@
         suppliers: 'api/dashboard/getSuppliers.php',
         profile: 'api/customer/profile.php',
         comments: 'api/comment/getComments.php',
-        orderFromCart: 'api/order/createFromCart.php'
+        orderFromCart: 'api/order/createFromCart.php',
+        registerFriend: 'api/customer/registerYourFriend.php',
+        addresses: 'api/address/getAllAddress.php'
     };
 
     const elements = {
@@ -713,6 +827,9 @@
         supplierSearchInput: document.getElementById('supplierSearchInput'),
         profileInfoGrid: document.getElementById('profileInfoGrid'),
         customerNameBadge: document.getElementById('customerNameBadge'),
+        profileSummaryName: document.getElementById('profileSummaryName'),
+        profileSummaryPhone: document.getElementById('profileSummaryPhone'),
+        profileSummaryShop: document.getElementById('profileSummaryShop'),
         cartItemsContainer: document.getElementById('cartItemsContainer'),
         cartSummaryItems: document.getElementById('cartSummaryItems'),
         cartSummaryQuantity: document.getElementById('cartSummaryQuantity'),
@@ -741,8 +858,18 @@
         detailAddToCartBtn: document.getElementById('detailAddToCartBtn'),
         optionsList: document.getElementById('optionsList'),
         optionsModalLabel: document.getElementById('optionsModalLabel'),
-        androidDownloadModal: document.getElementById('androidDownloadModal')
+        androidDownloadModal: document.getElementById('androidDownloadModal'),
+        registerFriendBtn: document.getElementById('registerFriendBtn'),
+        orderHistoryBtn: document.getElementById('orderHistoryBtn'),
+        registerFriendModal: document.getElementById('registerFriendModal'),
+        registerFriendForm: document.getElementById('registerFriendForm'),
+        registerFriendFeedback: document.getElementById('registerFriendFeedback'),
+        friendAddressSelect: document.getElementById('friendAddressSelect'),
+        registerFriendSubmitBtn: document.getElementById('registerFriendSubmitBtn'),
+        registerFriendSpinner: document.getElementById('registerFriendSpinner')
     };
+
+    const loadMoreDefaultLabel = elements.loadMoreGoodsBtn?.innerHTML || '';
 
     const state = {
         session: null,
@@ -751,18 +878,32 @@
         categories: [],
         suppliers: [],
         profile: null,
+        addresses: [],
         pagination: {
-            featuredOffset: 0,
             limit: 20,
-            totalFetched: 0
+            offsets: {
+                home: 0,
+                category: 0,
+                supplier: 0
+            },
+            hasMore: {
+                home: true,
+                category: true,
+                supplier: false
+            },
+            context: 'home',
+            contextId: null
         },
         activeCategoryId: null,
         activeSupplierId: null,
-        cart: loadCart()
+        searchQuery: '',
+        cart: loadCart(),
+        isLoadingGoods: false
     };
 
     let optionsModalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('optionsModal'));
     let detailModalInstance = bootstrap.Modal.getOrCreateInstance(elements.detailModal);
+    let registerFriendModalInstance = bootstrap.Modal.getOrCreateInstance(elements.registerFriendModal);
     let androidModalInstance = null;
 
     function sessionOrRedirect() {
@@ -803,6 +944,12 @@
     function persistCart() {
         localStorage.setItem(cartKey, JSON.stringify(state.cart));
         renderCartCounter();
+    }
+
+    function getCartItemUnitPrice(item) {
+        const base = Number(item?.basePrice ?? item?.price ?? 0);
+        const commission = Number(item?.commission ?? 0);
+        return base + commission;
     }
 
     function isAndroid() {
@@ -858,6 +1005,9 @@
     function renderProfile() {
         if (!state.profile) return;
         const profile = state.profile;
+        elements.profileSummaryName.textContent = profile.name || 'Retailer';
+        elements.profileSummaryPhone.textContent = profile.phone || '—';
+        elements.profileSummaryShop.textContent = profile.shopName ? `${profile.shopName}` : '—';
         elements.profileInfoGrid.innerHTML = `
             <div class="col-12 col-lg-6">
                 <div class="border rounded-4 p-3 bg-white">
@@ -884,44 +1034,309 @@
         `;
     }
 
+    async function loadAddressesIfNeeded() {
+        if (state.addresses.length > 0) {
+            return;
+        }
+        const payload = await fetchJson(API.addresses);
+        if (Array.isArray(payload)) {
+            state.addresses = payload;
+        } else if (Array.isArray(payload.addresses)) {
+            state.addresses = payload.addresses;
+        } else {
+            state.addresses = [];
+        }
+    }
+
+    function renderAddressOptions() {
+        if (!elements.friendAddressSelect) return;
+        if (state.addresses.length === 0) {
+            elements.friendAddressSelect.innerHTML = '<option value="">No addresses available</option>';
+            elements.friendAddressSelect.disabled = true;
+            return;
+        }
+        const options = ['<option value="">Select address</option>'].concat(
+            state.addresses.map(address => `<option value="${address.addressId ?? address.id}">${address.addressName ?? address.name ?? 'Address'}</option>`)
+        );
+        elements.friendAddressSelect.innerHTML = options.join('');
+        elements.friendAddressSelect.disabled = false;
+    }
+
+    function resetRegisterFriendForm() {
+        if (!elements.registerFriendForm) return;
+        elements.registerFriendForm.reset();
+        elements.registerFriendForm.classList.remove('was-validated');
+        if (elements.registerFriendFeedback) {
+            elements.registerFriendFeedback.classList.add('d-none');
+            elements.registerFriendFeedback.textContent = '';
+        }
+        if (elements.friendAddressSelect) {
+            elements.friendAddressSelect.disabled = state.addresses.length === 0;
+        }
+    }
+
+    function showRegisterFriendFeedback(message, variant = 'danger') {
+        if (!elements.registerFriendFeedback) return;
+        elements.registerFriendFeedback.textContent = message;
+        elements.registerFriendFeedback.classList.remove('d-none', 'alert-danger', 'alert-warning', 'alert-success');
+        elements.registerFriendFeedback.classList.add(`alert-${variant}`);
+    }
+
+    async function openRegisterFriendModal() {
+        if (!state.session) return;
+        try {
+            if (state.addresses.length === 0) {
+                elements.friendAddressSelect.innerHTML = '<option value="">Loading addresses…</option>';
+                elements.friendAddressSelect.disabled = true;
+                await loadAddressesIfNeeded();
+            }
+            renderAddressOptions();
+            if (elements.friendAddressSelect) {
+                elements.friendAddressSelect.value = '';
+            }
+            if (elements.registerFriendFeedback) {
+                showRegisterFriendFeedback('', 'success');
+                elements.registerFriendFeedback.classList.add('d-none');
+            }
+            registerFriendModalInstance.show();
+        } catch (error) {
+            console.error('Address load failed', error);
+            showRegisterFriendFeedback(error.message || 'Unable to load addresses.');
+        }
+    }
+
+    async function handleRegisterFriendSubmit(event) {
+        event.preventDefault();
+        if (!elements.registerFriendForm.checkValidity()) {
+            elements.registerFriendForm.classList.add('was-validated');
+            return;
+        }
+        elements.registerFriendForm.classList.remove('was-validated');
+        const formData = new FormData(elements.registerFriendForm);
+        const payload = {
+            name: (formData.get('name') || '').toString().trim(),
+            shopName: (formData.get('shopName') || '').toString().trim(),
+            phone: (formData.get('phone') || '').toString().trim(),
+            addressId: Number(formData.get('addressId')),
+            registerarCustomerId: state.session.customerId
+        };
+        elements.registerFriendSubmitBtn.disabled = true;
+        elements.registerFriendSpinner.classList.remove('d-none');
+        elements.registerFriendFeedback?.classList.add('d-none');
+        try {
+            const response = await fetchJson(API.registerFriend, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            showToast({ title: 'Friend registered', body: response.message || 'We sent them their password via SMS.', variant: 'success' });
+            registerFriendModalInstance.hide();
+            resetRegisterFriendForm();
+        } catch (error) {
+            console.error('Register friend failed', error);
+            showRegisterFriendFeedback(error.message || 'Registration failed.');
+        } finally {
+            elements.registerFriendSubmitBtn.disabled = false;
+            elements.registerFriendSpinner.classList.add('d-none');
+        }
+    }
+
     async function fetchInitialData() {
         showSkeletonGoods();
-        const [featured, categories, suppliers] = await Promise.all([
-            fetchJson(`${API.featuredGoods}?offset=${state.pagination.featuredOffset}&limit=${state.pagination.limit}`),
+        const [categories, suppliers] = await Promise.all([
             fetchJson(API.categories),
             fetchJson(API.suppliers)
         ]);
-
-        state.goods = featured.goods || [];
-        state.filteredGoods = [...state.goods];
-        state.pagination.totalFetched = state.goods.length;
-        renderGoods();
 
         state.categories = (categories.categories || []).filter(cat => Number(cat.isAvailable) === 1);
         renderCategories();
 
         state.suppliers = (suppliers.suppliers || []).filter(sup => Number(sup.isVisible) === 1);
         renderSuppliers();
+
+        await loadGoodsForContext({ type: 'home', append: false });
+    }
+
+    function transformSupplierGoods(payload) {
+        const supplier = payload?.supplier || {};
+        const goods = Array.isArray(payload?.goods) ? payload.goods : [];
+        return goods.map(item => {
+            const basePrice = Number(item?.discountPrice) > 0 ? Number(item.discountPrice) : Number(item?.price ?? 0);
+            const offer = {
+                supplierGoodsId: item.supplierGoodsId,
+                goodsId: item.goodsId,
+                price: basePrice,
+                minOrder: Number(item.minOrder) || 1,
+                shopId: supplier.shopId,
+                shopName: supplier.shopName,
+                shopType: supplier.shopType,
+                phone: supplier.phone
+            };
+            return {
+                goodsId: item.goodsId,
+                name: item.name,
+                description: item.description,
+                imageUrl: item.imageUrl,
+                categoryName: item.categoryName,
+                commission: item.commission ?? 0,
+                priority: item.priority,
+                primarySupplier: offer,
+                supplierName: supplier.shopName,
+                supplierOffers: [offer],
+                lowestPrice: basePrice
+            };
+        });
+    }
+
+    function updateLoadMoreButton() {
+        if (!elements.loadMoreGoodsBtn) return;
+        const context = state.pagination.context;
+        const isSupplierContext = context === 'supplier';
+        elements.loadMoreGoodsBtn.classList.toggle('d-none', isSupplierContext);
+        const hasMore = state.pagination.hasMore[context];
+        elements.loadMoreGoodsBtn.disabled = state.isLoadingGoods || !hasMore;
+        if (hasMore) {
+            elements.loadMoreGoodsBtn.innerHTML = loadMoreDefaultLabel;
+        } else {
+            elements.loadMoreGoodsBtn.innerHTML = '<i class="bi bi-check2-circle me-2"></i>No more goods';
+        }
+    }
+
+    function applySearchFilter() {
+        if (!state.searchQuery) {
+            state.filteredGoods = [...state.goods];
+        } else {
+            const query = state.searchQuery.toLowerCase();
+            state.filteredGoods = state.goods.filter(goods =>
+                goods.name?.toLowerCase().includes(query) ||
+                goods.categoryName?.toLowerCase().includes(query) ||
+                goods.primarySupplier?.shopName?.toLowerCase().includes(query)
+            );
+        }
+        renderGoods();
+    }
+
+    async function loadGoodsForContext({ type, id = null, append = false }) {
+        const context = ['home', 'category', 'supplier'].includes(type) ? type : 'home';
+        state.pagination.context = context;
+        state.pagination.contextId = id ?? null;
+        if (!append) {
+            if (context !== 'supplier') {
+                state.pagination.offsets[context] = 0;
+                state.pagination.hasMore[context] = true;
+            } else {
+                state.pagination.hasMore[context] = false;
+            }
+        }
+        if (!append) {
+            showSkeletonGoods();
+        }
+        state.isLoadingGoods = true;
+        updateLoadMoreButton();
+        try {
+            const limit = state.pagination.limit;
+            const offset = state.pagination.offsets[context] || 0;
+            let response;
+            if (context === 'home') {
+                response = await fetchJson(`${API.featuredGoods}?offset=${offset}&limit=${limit}`);
+            } else if (context === 'category') {
+                if (!id) {
+                    throw new Error('Select a category to load goods.');
+                }
+                response = await fetchJson(API.goodsByCategory(id, offset, limit));
+            } else {
+                if (!id) {
+                    throw new Error('Select a supplier to load goods.');
+                }
+                response = await fetchJson(API.goodsBySupplier(id));
+            }
+            let newGoods = Array.isArray(response.goods) ? response.goods : [];
+            if (context === 'supplier') {
+                newGoods = transformSupplierGoods(response);
+                state.pagination.hasMore.supplier = false;
+            } else if (newGoods.length < limit) {
+                state.pagination.hasMore[context] = false;
+            } else {
+                state.pagination.hasMore[context] = true;
+            }
+
+            if (append && newGoods.length === 0) {
+                showToast({ title: 'All caught up', body: 'No more goods available for now.', variant: 'info' });
+                return;
+            }
+
+            if (append) {
+                state.goods.push(...newGoods);
+            } else {
+                state.goods = newGoods;
+            }
+
+            if (context !== 'supplier') {
+                state.pagination.offsets[context] = offset + state.pagination.limit;
+            } else {
+                state.pagination.offsets[context] = 0;
+            }
+
+            applySearchFilter();
+        } catch (error) {
+            console.error('Goods load error', error);
+            showToast({ title: 'Load failed', body: error.message || 'Unable to load goods.', variant: 'danger' });
+            if (!append) {
+                state.goods = [];
+                state.filteredGoods = [];
+                renderGoods();
+            }
+            throw error;
+        } finally {
+            state.isLoadingGoods = false;
+            updateLoadMoreButton();
+        }
+    }
+
+    async function showHomeGoods() {
+        state.activeCategoryId = null;
+        state.activeSupplierId = null;
+        renderSuppliers();
+        await loadGoodsForContext({ type: 'home', append: false });
+        highlightActiveChips();
+    }
+
+    async function handleCategorySelection(categoryId) {
+        if (!categoryId) {
+            await showHomeGoods();
+            return;
+        }
+        state.activeCategoryId = categoryId;
+        state.activeSupplierId = null;
+        renderSuppliers();
+        await loadGoodsForContext({ type: 'category', id: categoryId, append: false });
+        highlightActiveChips();
+    }
+
+    async function handleSupplierSelection(supplierId) {
+        state.activeSupplierId = supplierId;
+        state.activeCategoryId = null;
+        renderSuppliers();
+        await loadGoodsForContext({ type: 'supplier', id: supplierId, append: false });
+        highlightActiveChips();
     }
 
     function renderCategories() {
         elements.categoryCountBadge.textContent = state.categories.length.toString();
         elements.homeCategoryChips.innerHTML = '';
-        const allChip = createChipElement({ id: null, name: 'All categories' }, state.activeCategoryId === null, () => {
-            state.activeCategoryId = null;
-            state.activeSupplierId = null;
-            state.filteredGoods = [...state.goods];
-            highlightActiveChips();
-            renderGoods();
-        });
+        const allChip = createChipElement(
+            { id: null, name: 'All categories' },
+            state.activeCategoryId === null && state.activeSupplierId === null,
+            () => showHomeGoods().catch(() => {})
+        );
         elements.homeCategoryChips.appendChild(allChip);
 
         state.categories.forEach(category => {
-            const chip = createChipElement(category, state.activeCategoryId === category.id, () => {
-                state.activeCategoryId = category.id;
-                state.activeSupplierId = null;
-                filterGoods();
-            });
+            const chip = createChipElement(
+                category,
+                state.activeCategoryId === category.id,
+                () => handleCategorySelection(category.id).catch(() => {})
+            );
             elements.homeCategoryChips.appendChild(chip);
         });
 
@@ -945,8 +1360,12 @@
         btn.type = 'button';
         btn.className = `chip ${isActive ? 'active' : ''}`;
         btn.textContent = category.name || 'Unknown';
-        btn.addEventListener('click', () => {
-            onClick();
+        btn.addEventListener('click', async () => {
+            try {
+                await onClick();
+            } catch (error) {
+                console.error('Category action failed', error);
+            }
             highlightActiveChips();
         });
         btn.dataset.categoryId = category.id ?? 'all';
@@ -957,7 +1376,7 @@
         const chips = elements.homeCategoryChips.querySelectorAll('.chip');
         chips.forEach(chip => {
             const chipCategoryId = chip.dataset.categoryId;
-            if (state.activeCategoryId === null && chipCategoryId === 'all') {
+            if (state.activeCategoryId === null && state.activeSupplierId === null && chipCategoryId === 'all') {
                 chip.classList.add('active');
             } else if (Number(chipCategoryId) === state.activeCategoryId) {
                 chip.classList.add('active');
@@ -970,7 +1389,7 @@
     function renderSuppliers() {
         elements.supplierList.innerHTML = state.suppliers.map(supplier => `
             <div class="col-12 col-md-6 col-xl-4">
-                <div class="supplier-card" data-supplier-id="${supplier.shopId}" data-shop-type="${supplier.shopType}">
+                <div class="supplier-card ${state.activeSupplierId === supplier.shopId ? 'active' : ''}" data-supplier-id="${supplier.shopId}" data-shop-type="${supplier.shopType}">
                     <div class="supplier-avatar">
                         <i class="bi bi-shop"></i>
                     </div>
@@ -1002,12 +1421,16 @@
         }
 
         elements.goodsGrid.innerHTML = state.filteredGoods.map(goods => {
-            const cartItem = state.cart.find(item => item.goodsId === goods.goodsId && item.supplierGoodsId === goods.primarySupplier?.supplierGoodsId);
+            const supplierGoodsId = goods.primarySupplier?.supplierGoodsId;
+            const cartItem = state.cart.find(item => item.goodsId === goods.goodsId && item.supplierGoodsId === supplierGoodsId);
             const canAdd = !goods.primarySupplier || goods.primarySupplier.shopType?.toLowerCase() !== 'self-delivered';
             const hasCart = Boolean(cartItem);
             const quantity = cartItem?.quantity ?? goods.primarySupplier?.minOrder ?? 1;
-            const price = goods.primarySupplier?.price ?? goods.lowestPrice ?? 0;
+            const basePrice = Number(goods.primarySupplier?.price ?? goods.lowestPrice ?? 0);
+            const commission = Number(goods.commission ?? 0);
+            const price = basePrice + commission;
             const minOrder = goods.primarySupplier?.minOrder ?? 1;
+            const showOptions = Array.isArray(goods.supplierOffers) && goods.supplierOffers.length > 1;
 
             return `
                 <article class="goods-card" data-goods-id="${goods.goodsId}">
@@ -1027,11 +1450,13 @@
                         <div class="text-muted small">
                             Priority ${goods.priority ?? 0} &bull; Min order ${minOrder}
                         </div>
-                        <div class="actions">
-                            <button class="btn btn-outline-primary btn-sm" data-action="see-options" data-goods-id="${goods.goodsId}">
-                                <i class="bi bi-list-ul me-1"></i>
-                                See options
-                            </button>
+                        <div class="actions${showOptions ? '' : ' flex-column'}">
+                            ${showOptions ? `
+                                <button class="btn btn-outline-primary btn-sm" data-action="see-options" data-goods-id="${goods.goodsId}">
+                                    <i class="bi bi-list-ul me-1"></i>
+                                    See options
+                                </button>
+                            ` : ''}
                             ${canAdd ? renderAddToCartControl(goods.goodsId, goods.primarySupplier?.supplierGoodsId, hasCart, quantity, minOrder) : `
                                 <button class="btn btn-outline-secondary btn-sm w-100" data-action="self-delivered-warning">
                                     <i class="bi bi-geo-alt-fill me-1"></i>
@@ -1084,16 +1509,6 @@
         `).join('');
     }
 
-    function filterGoods() {
-        if (state.activeCategoryId !== null) {
-            state.filteredGoods = state.goods.filter(g => Number(g.categoryId) === Number(state.activeCategoryId));
-        } else if (state.activeSupplierId !== null) {
-            state.filteredGoods = state.goods.filter(g => Number(g.primarySupplier?.shopId) === Number(state.activeSupplierId));
-        } else {
-            state.filteredGoods = [...state.goods];
-        }
-        renderGoods();
-    }
 
     function showToast({ title = 'Notification', body = '', variant = 'primary' }) {
         const wrapper = document.createElement('div');
@@ -1125,7 +1540,7 @@
 
         elements.cartSummaryItems.textContent = totalItems.toString();
         elements.cartSummaryQuantity.textContent = totalQuantity.toString();
-        const totalAmount = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const totalAmount = state.cart.reduce((sum, item) => sum + (getCartItemUnitPrice(item) * item.quantity), 0);
         elements.cartSummaryAmount.textContent = `ETB ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     }
 
@@ -1148,7 +1563,7 @@
                 <div class="flex-grow-1">
                     <div class="fw-semibold">${item.name || 'Goods'}</div>
                     <div class="text-muted small">${item.supplierName || 'Supplier'} &bull; Min ${item.minOrder}</div>
-                    <div class="text-primary fw-semibold">ETB ${item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                    <div class="text-primary fw-semibold">ETB ${getCartItemUnitPrice(item).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                 </div>
                 <div class="d-flex flex-column align-items-end gap-2">
                     <div class="btn-group btn-group-sm" role="group">
@@ -1183,15 +1598,23 @@
         }
 
         const existing = state.cart.find(item => item.goodsId === goods.goodsId && item.supplierGoodsId === supplierOffer.supplierGoodsId);
+        const basePrice = Number(supplierOffer.price) || 0;
+        const commission = Number(goods.commission ?? 0);
+
         if (existing) {
             existing.quantity = Math.max(existing.quantity + supplierOffer.minOrder, supplierOffer.minOrder);
+            existing.basePrice = basePrice;
+            existing.commission = commission;
+            existing.price = basePrice + commission;
         } else {
             state.cart.push({
                 goodsId: goods.goodsId,
                 supplierGoodsId: supplierOffer.supplierGoodsId,
                 name: goods.name,
                 imageUrl: goods.imageUrl,
-                price: Number(supplierOffer.price) || 0,
+                price: basePrice + commission,
+                basePrice,
+                commission,
                 quantity: Number(supplierOffer.minOrder) || 1,
                 minOrder: Number(supplierOffer.minOrder) || 1,
                 supplierName: supplierOffer.shopName || goods.supplierName,
@@ -1274,20 +1697,24 @@
         }
     }
 
-    async function loadMoreFeatured() {
-        state.pagination.featuredOffset += state.pagination.limit;
+    async function loadMoreGoods() {
+        const context = state.pagination.context;
+        if (context === 'supplier') {
+            showToast({ title: 'All caught up', body: 'Supplier goods are fully loaded.', variant: 'info' });
+            return;
+        }
+        if (!state.pagination.hasMore[context]) {
+            showToast({ title: 'All caught up', body: 'No more goods to display yet.', variant: 'info' });
+            return;
+        }
         try {
-            const result = await fetchJson(`${API.featuredGoods}?offset=${state.pagination.featuredOffset}&limit=${state.pagination.limit}`);
-            const newGoods = result.goods || [];
-            if (newGoods.length === 0) {
-                showToast({ title: 'All caught up', body: 'No more goods to display yet.', variant: 'info' });
-                return;
-            }
-            state.goods.push(...newGoods);
-            filterGoods();
-        } catch (err) {
-            console.error('Failed to load more goods', err);
-            showToast({ title: 'Load failed', body: err.message, variant: 'danger' });
+            await loadGoodsForContext({
+                type: context,
+                id: state.pagination.contextId,
+                append: true
+            });
+        } catch (error) {
+            console.error('Failed to load more goods', error);
         }
     }
 
@@ -1303,26 +1730,28 @@
             });
         });
 
-        elements.categoryCardList.addEventListener('click', event => {
+        elements.categoryCardList.addEventListener('click', async event => {
             const card = event.target.closest('.category-card');
             if (!card) return;
             const categoryId = Number(card.dataset.categoryId);
-            state.activeCategoryId = categoryId;
-            state.activeSupplierId = null;
-            filterGoods();
-            switchScreen('homeScreen');
-            highlightActiveChips();
+            try {
+                await handleCategorySelection(categoryId);
+                switchScreen('homeScreen');
+            } catch (error) {
+                console.error('Category load failed', error);
+            }
         });
 
-        elements.supplierList.addEventListener('click', event => {
+        elements.supplierList.addEventListener('click', async event => {
             const card = event.target.closest('.supplier-card');
             if (!card) return;
             const supplierId = Number(card.dataset.supplierId);
-            state.activeSupplierId = supplierId;
-            state.activeCategoryId = null;
-            highlightActiveChips();
-            filterGoods();
-            switchScreen('homeScreen');
+            try {
+                await handleSupplierSelection(supplierId);
+                switchScreen('homeScreen');
+            } catch (error) {
+                console.error('Supplier load failed', error);
+            }
         });
 
         elements.goodsGrid.addEventListener('click', async (event) => {
@@ -1406,28 +1835,22 @@
 
         elements.reloadFeaturedBtn.addEventListener('click', async () => {
             try {
-                state.pagination.featuredOffset = 0;
-                await fetchInitialData();
-                showToast({ title: 'Refreshed', body: 'Latest goods have been loaded.', variant: 'success' });
+                await loadGoodsForContext({
+                    type: state.pagination.context,
+                    id: state.pagination.contextId,
+                    append: false
+                });
+                showToast({ title: 'Refreshed', body: 'Latest goods loaded.', variant: 'success' });
             } catch (err) {
                 showToast({ title: 'Refresh failed', body: err.message, variant: 'danger' });
             }
         });
 
-        elements.loadMoreGoodsBtn.addEventListener('click', loadMoreFeatured);
+        elements.loadMoreGoodsBtn.addEventListener('click', loadMoreGoods);
 
         elements.globalSearchInput?.addEventListener('input', (event) => {
-            const query = event.target.value.trim().toLowerCase();
-            if (!query) {
-                filterGoods();
-                return;
-            }
-            state.filteredGoods = state.goods.filter(goods =>
-                goods.name?.toLowerCase().includes(query) ||
-                goods.categoryName?.toLowerCase().includes(query) ||
-                goods.primarySupplier?.shopName?.toLowerCase().includes(query)
-            );
-            renderGoods();
+            state.searchQuery = event.target.value.trim().toLowerCase();
+            applySearchFilter();
         });
 
         elements.supplierSearchInput?.addEventListener('input', (event) => {
@@ -1456,6 +1879,15 @@
         document.getElementById('optionsModal').addEventListener('hidden.bs.modal', () => {
             elements.optionsList.innerHTML = '';
         });
+
+        elements.registerFriendBtn?.addEventListener('click', () => {
+            openRegisterFriendModal();
+        });
+        elements.registerFriendForm?.addEventListener('submit', handleRegisterFriendSubmit);
+        elements.registerFriendModal?.addEventListener('hidden.bs.modal', resetRegisterFriendForm);
+        elements.orderHistoryBtn?.addEventListener('click', () => {
+            window.location.href = 'orderHistory.html';
+        });
     }
 
     function switchScreen(targetId) {
@@ -1469,7 +1901,7 @@
         elements.detailImage.alt = goods.name || 'Goods';
         elements.detailName.textContent = goods.name || 'Goods';
         elements.detailCategory.textContent = goods.categoryName || 'Category';
-        const price = goods.primarySupplier?.price ?? goods.lowestPrice ?? 0;
+        const price = (goods.primarySupplier?.price ?? goods.lowestPrice ?? 0) + Number(goods.commission ?? 0);
         elements.detailPrice.textContent = `ETB ${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
         elements.detailSupplier.innerHTML = `<i class="bi bi-shop"></i>${goods.primarySupplier?.shopName || goods.supplierName || 'Supplier'}`;
         elements.detailDescription.innerHTML = goods.description || '<span class="text-muted">No description provided.</span>';
@@ -1519,21 +1951,25 @@
                 `;
                 return;
             }
-            elements.optionsList.innerHTML = offers.map(offer => `
-                <div class="option-row" data-goods-id="${goods.goodsId}" data-supplier-goods-id="${offer.supplierGoodsId}">
-                    <div>
-                        <div class="fw-semibold">${offer.shopName || 'Supplier'}</div>
-                        <div class="text-muted small">${offer.shopType || 'Shop type'}</div>
+            elements.optionsList.innerHTML = offers.map(offer => {
+                const displayPrice = ((Number(offer.price) || 0) + Number(goods.commission ?? 0))
+                    .toLocaleString(undefined, { minimumFractionDigits: 2 });
+                return `
+                    <div class="option-row" data-goods-id="${goods.goodsId}" data-supplier-goods-id="${offer.supplierGoodsId}">
+                        <div>
+                            <div class="fw-semibold">${offer.shopName || 'Supplier'}</div>
+                            <div class="text-muted small">${offer.shopType || 'Shop type'}</div>
+                        </div>
+                        <div class="fw-semibold text-primary">
+                            ETB ${displayPrice}
+                        </div>
+                        <div class="text-muted small">Min order ${offer.minOrder ?? 1}</div>
+                        <button class="btn btn-primary btn-sm" data-action="add-option-to-cart">
+                            <i class="bi bi-cart-plus me-1"></i>Add
+                        </button>
                     </div>
-                    <div class="fw-semibold text-primary">
-                        ETB ${(offer.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </div>
-                    <div class="text-muted small">Min order ${offer.minOrder ?? 1}</div>
-                    <button class="btn btn-primary btn-sm" data-action="add-option-to-cart">
-                        <i class="bi bi-cart-plus me-1"></i>Add
-                    </button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         } catch (err) {
             elements.optionsList.innerHTML = `<div class="text-danger text-center">${err.message}</div>`;
         }

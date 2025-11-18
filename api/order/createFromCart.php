@@ -62,6 +62,33 @@ if (count($items) === 0) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../model/SMS.php';
+
+function formatPhoneForSms(?string $rawPhone): ?string
+{
+    if ($rawPhone === null) {
+        return null;
+    }
+
+    $digits = preg_replace('/\D+/', '', $rawPhone);
+    if ($digits === '') {
+        return null;
+    }
+
+    if (strncmp($digits, '251', 3) === 0) {
+        $digits = substr($digits, -9);
+    }
+
+    if (strlen($digits) === 9) {
+        return '+251' . $digits;
+    }
+
+    if (strlen($digits) === 10 && $digits[0] === '0') {
+        return '+251' . substr($digits, 1);
+    }
+
+    return null;
+}
 
 try {
     $database = new Database();
@@ -72,7 +99,7 @@ try {
 
     $db->beginTransaction();
 
-    $customerStmt = $db->prepare('SELECT id, name FROM customer WHERE id = :customerId LIMIT 1');
+    $customerStmt = $db->prepare('SELECT id, name, phone FROM customer WHERE id = :customerId LIMIT 1');
     $customerStmt->execute([':customerId' => $customerId]);
     $customer = $customerStmt->fetch();
     if (!$customer) {
@@ -95,7 +122,8 @@ try {
             sg.is_available,
             s.shop_name,
             s.shop_type,
-            g.name AS goods_name
+            g.name AS goods_name,
+            g.commission AS goods_commission
         FROM supplier_goods sg
         INNER JOIN supplier s ON s.shop_id = sg.supplier_id
         INNER JOIN goods g ON g.id = sg.goods_id
@@ -133,9 +161,11 @@ try {
             throw new RuntimeException("Goods '{$offer['goods_name']}' requires a minimum order of {$minOrder}.");
         }
 
-        $unitPrice = isset($offer['discount_price']) && (int)$offer['discount_price'] > 0
+        $unitBasePrice = isset($offer['discount_price']) && (int)$offer['discount_price'] > 0
             ? (float)$offer['discount_price']
             : (float)$offer['price'];
+        $commission = isset($offer['goods_commission']) ? (float)$offer['goods_commission'] : 0.0;
+        $unitPrice = $unitBasePrice + $commission;
 
         $lineTotal = $unitPrice * $quantity;
         $totalPrice += $lineTotal;
@@ -184,14 +214,57 @@ try {
 
     $db->commit();
 
-    echo json_encode([
+    $responsePayload = [
         'success' => true,
         'message' => 'Order submitted successfully.',
         'orderId' => $orderId,
         'totalPrice' => $totalPrice,
         'itemCount' => count($preparedItems),
         'totalQuantity' => $totalQuantity
-    ]);
+    ];
+
+    echo json_encode($responsePayload);
+
+    try {
+        $sms = new SMS();
+        $customerPhone = formatPhoneForSms($customer['phone'] ?? null);
+        $friendlyTotal = number_format($totalPrice, 2, '.', ',');
+        $summaryLines = array_map(static function (array $item): string {
+            $name = $item['goods_name'] ?? 'Goods';
+            $qty = (int)$item['quantity'];
+            $price = number_format((float)$item['unit_price'], 2, '.', ',');
+            return sprintf('%s=%d*%s', $name, $qty, $price);
+        }, $preparedItems);
+        $summaryText = implode(', ', $summaryLines);
+
+        if ($customerPhone) {
+            $sms->sendSms(
+                $customerPhone,
+                sprintf(
+                    "Merkato Pro: Order #%d received. Total ETB %s. We will contact you shortly.",
+                    $orderId,
+                    $friendlyTotal
+                )
+            );
+        }
+
+        $adminPhone = formatPhoneForSms('0943-090921');
+        if ($adminPhone) {
+            $customerName = $customer['name'] ?? 'Customer';
+            $sms->sendSms(
+                $adminPhone,
+                sprintf(
+                    "New order #%d from %s. Total ETB %s. %s",
+                    $orderId,
+                    $customerName,
+                    $friendlyTotal,
+                    $summaryText
+                )
+            );
+        }
+    } catch (Throwable $smsError) {
+        error_log('Order SMS dispatch failed: ' . $smsError->getMessage());
+    }
 } catch (Throwable $exception) {
     if (isset($db) && $db->inTransaction()) {
         $db->rollBack();
