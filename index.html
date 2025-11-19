@@ -299,6 +299,11 @@
             height: auto;
             max-height: 85vh;
         }
+
+        .cart-offcanvas.offcanvas-bottom {
+            min-height: 65vh;
+            max-height: 92vh;
+        }
         
         .offcanvas-header {
             padding-bottom: 0;
@@ -326,6 +331,15 @@
             border-radius: 12px;
             object-fit: cover;
             background: #f8f9fa;
+        }
+
+        .lazy-img {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .lazy-img.loaded {
+            opacity: 1;
         }
         
         /* Loader & Skeleton */
@@ -512,7 +526,7 @@
 <!-- --- OFF CANVAS COMPONENTS (Replaces Modals) --- -->
 
 <!-- Cart Sheet -->
-<div class="offcanvas offcanvas-bottom" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
+<div class="offcanvas offcanvas-bottom cart-offcanvas" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
     <div class="offcanvas-header justify-content-center pb-0">
         <div class="drag-handle"></div>
     </div>
@@ -595,6 +609,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div class="alert alert-danger d-none small" id="registerFriendFeedback" role="alert"></div>
                 <form id="registerFriendForm">
                     <div class="mb-3">
                         <label class="form-label small text-muted">Friend Name</label>
@@ -612,7 +627,10 @@
                         <label class="form-label small text-muted">Address</label>
                         <select class="form-select bg-light border-0" name="addressId" id="friendAddressSelect" required></select>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-2" id="registerFriendSubmitBtn">Submit</button>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 d-flex justify-content-center align-items-center gap-2" id="registerFriendSubmitBtn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="registerFriendSpinner"></span>
+                        <span>Submit</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -655,6 +673,14 @@
         addresses: 'api/address/getAllAddress.php'
     };
 
+    const imagePlaceholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    let lazyImageObserver = null;
+
+    const cartOffcanvasEl = document.getElementById('cartOffcanvas');
+    const detailOffcanvasEl = document.getElementById('detailOffcanvas');
+    const optionsOffcanvasEl = document.getElementById('optionsOffcanvas');
+    const registerFriendModalEl = document.getElementById('registerFriendModal');
+
     // --- ELEMENTS ---
     const els = {
         goodsGrid: document.getElementById('goodsGrid'),
@@ -662,10 +688,11 @@
         categoryChips: document.getElementById('homeCategoryChips'),
         loadMoreBtn: document.getElementById('loadMoreGoodsBtn'),
         reloadFeaturedBtn: document.getElementById('reloadFeaturedBtn'),
-        cartOffcanvas: new bootstrap.Offcanvas('#cartOffcanvas'),
-        detailOffcanvas: new bootstrap.Offcanvas('#detailOffcanvas'),
-        optionsOffcanvas: new bootstrap.Offcanvas('#optionsOffcanvas'),
-        registerFriendModal: new bootstrap.Modal('#registerFriendModal'),
+        cartOffcanvas: cartOffcanvasEl ? new bootstrap.Offcanvas(cartOffcanvasEl) : null,
+        detailOffcanvas: detailOffcanvasEl ? new bootstrap.Offcanvas(detailOffcanvasEl) : null,
+        optionsOffcanvas: optionsOffcanvasEl ? new bootstrap.Offcanvas(optionsOffcanvasEl) : null,
+        registerFriendModalEl,
+        registerFriendModal: registerFriendModalEl ? new bootstrap.Modal(registerFriendModalEl) : null,
         toastContainer: document.getElementById('toastContainer'),
         globalSearch: document.getElementById('globalSearchInput'),
         
@@ -673,6 +700,13 @@
         customerName: document.getElementById('customerNameBadge'),
         cartBadge: document.getElementById('cartCountBadge'),
         navCartDot: document.getElementById('navCartDot'),
+
+        // Cart
+        cartItemsContainer: document.getElementById('cartItemsContainer'),
+        cartSummaryItems: document.getElementById('cartSummaryItems'),
+        cartSummaryAmount: document.getElementById('cartSummaryAmount'),
+        placeOrderBtn: document.getElementById('placeOrderBtn'),
+        clearCartBtn: document.getElementById('clearCartBtn'),
         
         // Profile
         profileName: document.getElementById('profileSummaryName'),
@@ -687,10 +721,23 @@
         detailDesc: document.getElementById('detailDescription'),
         detailSupplier: document.getElementById('detailSupplier'),
         detailComments: document.getElementById('detailComments'),
-        detailAddBtn: document.getElementById('detailAddToCartBtn')
+        detailAddBtn: document.getElementById('detailAddToCartBtn'),
+
+        // Profile actions
+        logoutBtn: document.getElementById('logoutBtn'),
+        orderHistoryBtn: document.getElementById('orderHistoryBtn'),
+
+        // Register friend
+        registerFriendBtn: document.getElementById('registerFriendBtn'),
+        registerFriendForm: document.getElementById('registerFriendForm'),
+        registerFriendFeedback: document.getElementById('registerFriendFeedback'),
+        registerFriendSubmitBtn: document.getElementById('registerFriendSubmitBtn'),
+        registerFriendSpinner: document.getElementById('registerFriendSpinner'),
+        friendAddressSelect: document.getElementById('friendAddressSelect')
     };
 
     const loadMoreDefaultLabel = els.loadMoreBtn?.innerHTML?.trim() || 'Load More';
+    const placeOrderDefaultLabel = (els.placeOrderBtn?.innerHTML || 'Place Order').trim();
 
     const state = {
         session: null,
@@ -699,6 +746,7 @@
         filteredGoods: [],
         categories: [],
         suppliers: [],
+        addresses: [],
         activeCategory: null,
         activeSupplier: null,
         loading: false,
@@ -723,7 +771,7 @@
         window.location.href = 'login.html';
     }
 
-    function init() {
+    async function init() {
         const raw = localStorage.getItem(sessionKey);
         if(!raw) return redirectToLogin();
         try {
@@ -746,35 +794,104 @@
             state.cart = [];
         }
         updateCartUI();
+        if(els.friendAddressSelect) {
+            els.friendAddressSelect.disabled = true;
+        }
 
         attachEvents();
-        fetchProfile();
-        fetchInitialData();
+        await Promise.allSettled([fetchProfile(), fetchInitialData()]);
     }
 
-    async function fetchJson(url, opts) {
+    async function handlePlaceOrder() {
+        if(!state.cart.length) {
+            showToast('Cart empty', 'Add goods before placing an order.', 'warning');
+            return;
+        }
+        if(!state.session?.customerId) {
+            redirectToLogin();
+            return;
+        }
+        const normalizedItems = state.cart
+            .filter(item => Number(item.quantity) > 0)
+            .map(item => ({
+                supplierGoodsId: item.supplierGoodsId ?? item.goodsId,
+                goodsId: item.goodsId,
+                quantity: item.quantity
+            }))
+            .filter(item => item.supplierGoodsId);
+        if(!normalizedItems.length) {
+            showToast('Missing data', 'Unable to place order for these goods. Please re-add them.', 'danger');
+            return;
+        }
+        if(els.placeOrderBtn) {
+            els.placeOrderBtn.disabled = true;
+            els.placeOrderBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Placing...';
+        }
         try {
-            const res = await fetch(url, opts);
-            if(!res.ok) throw new Error('Network error');
-            return await res.json();
-        } catch(e) {
-            showToast('Error', e.message, 'danger');
-            throw e;
+            const response = await fetchJson(API.orderFromCart, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerId: state.session.customerId,
+                    items: normalizedItems
+                })
+            });
+            showToast('Order placed', response?.message || 'Your order has been submitted.', 'success');
+            state.cart = [];
+            saveCart();
+            els.cartOffcanvas?.hide();
+        } catch (error) {
+            console.error('Order submission failed', error);
+            showToast('Order failed', error.message || 'Could not submit order.', 'danger');
+        } finally {
+            if(els.placeOrderBtn) {
+                els.placeOrderBtn.disabled = false;
+                els.placeOrderBtn.innerHTML = placeOrderDefaultLabel;
+            }
         }
     }
 
+    async function fetchJson(url, opts = {}) {
+        const response = await fetch(url, opts);
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_) {
+            payload = null;
+        }
+        if(!response.ok) {
+            const message = (payload && typeof payload === 'object' && payload.message)
+                ? payload.message
+                : 'Request failed';
+            throw new Error(message);
+        }
+        return payload;
+    }
+
     async function fetchProfile() {
-        const data = await fetchJson(API.profile, { 
-            method: 'POST', 
-            body: JSON.stringify({ customerId: state.session.customerId }) 
-        });
-        if(data.success && data.profile) {
-            const p = data.profile;
-            els.customerName.textContent = p.name || 'User';
-            els.profileName.textContent = p.name;
-            els.profileShop.textContent = p.shopName;
-            els.profilePhone.textContent = p.phone;
-            els.profileAddress.textContent = `${p.address?.subCity || ''}, ${p.specificAddress || ''}`;
+        if(!state.session?.customerId) return;
+        try {
+            const data = await fetchJson(API.profile, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerId: state.session.customerId }) 
+            });
+            if(data?.success && data.profile) {
+                const p = data.profile;
+                if(els.customerName) els.customerName.textContent = p.name || 'User';
+                if(els.profileName) els.profileName.textContent = p.name || '—';
+                if(els.profileShop) els.profileShop.textContent = p.shopName || '—';
+                if(els.profilePhone) els.profilePhone.textContent = p.phone || '—';
+                if(els.profileAddress) {
+                    const parts = [p.address?.subCity, p.specificAddress].filter(Boolean);
+                    els.profileAddress.textContent = parts.length ? parts.join(', ') : '—';
+                }
+            } else {
+                throw new Error(data?.message || 'Profile unavailable');
+            }
+        } catch (error) {
+            console.error('Profile fetch failed', error);
+            showToast('Profile unavailable', error.message || 'Unable to load profile.', 'warning');
         }
     }
 
@@ -795,7 +912,7 @@
         }
 
         // Load Goods
-        loadGoods('home');
+        await loadGoods('home');
     }
 
     async function loadGoods(context = 'home', id = null, append = false) {
@@ -881,12 +998,9 @@
             }
 
             if(targetContext !== 'supplier') {
-                if(newGoods.length === 0) {
-                    state.pagination.hasMore[targetContext] = false;
-                } else {
-                    state.pagination.hasMore[targetContext] = true;
-                    state.pagination.offsets[targetContext] = offset + state.pagination.limit;
-                }
+                const nextOffset = newGoods.length ? offset + newGoods.length : offset;
+                state.pagination.offsets[targetContext] = nextOffset;
+                state.pagination.hasMore[targetContext] = newGoods.length === state.pagination.limit;
             } else {
                 state.pagination.hasMore.supplier = false;
                 state.pagination.offsets.supplier = 0;
@@ -968,10 +1082,9 @@
     function renderGoods() {
         if(!els.goodsGrid) return;
         const hasSearch = state.searchQuery.length > 0;
-        const source = hasSearch
+        const list = hasSearch
             ? (Array.isArray(state.filteredGoods) ? state.filteredGoods : [])
-            : (Array.isArray(state.filteredGoods) && state.filteredGoods.length ? state.filteredGoods : state.goods);
-        const list = Array.isArray(source) ? source : [];
+            : (Array.isArray(state.goods) ? state.goods : []);
 
         if(!list.length) {
             const message = hasSearch ? 'No goods match your search.' : 'No goods found';
@@ -983,16 +1096,19 @@
             const price = g.primarySupplier?.price || g.lowestPrice || 0;
             const cartItem = state.cart.find(i => i.goodsId == g.goodsId);
             const qty = cartItem ? cartItem.quantity : 0;
+            const imageUrl = g.imageUrl || 'https://via.placeholder.com/200';
+            const supplierLabel = g.supplierName || g.primarySupplier?.shopName || 'Supplier';
+            const productName = g.name || 'Product';
 
             return `
             <article class="mobile-card" onclick="openDetail(${g.goodsId})">
                 <div class="mobile-card-img-wrapper">
-                    <img src="${g.imageUrl || 'https://via.placeholder.com/200'}" class="mobile-card-img" loading="lazy">
+                    <img src="${imagePlaceholder}" data-src="${imageUrl}" class="mobile-card-img lazy-img" loading="lazy" alt="${productName}">
                     ${g.discount ? `<span class="position-absolute top-0 start-0 badge bg-danger m-2">-${g.discount}%</span>` : ''}
                 </div>
                 <div class="mobile-card-body">
-                    <div class="mobile-card-title">${g.name}</div>
-                    <div class="text-muted small mb-1" style="font-size:0.75rem">${g.supplierName || g.primarySupplier?.shopName || 'Supplier'}</div>
+                    <div class="mobile-card-title">${productName}</div>
+                    <div class="text-muted small mb-1" style="font-size:0.75rem">${supplierLabel}</div>
                     <div class="mobile-card-price">ETB ${parseFloat(price).toLocaleString()}</div>
                     
                     <div onclick="event.stopPropagation()">
@@ -1013,6 +1129,49 @@
             </article>
             `;
         }).join('');
+
+        setupLazyLoading();
+    }
+
+    function setupLazyLoading() {
+        const candidates = document.querySelectorAll('.lazy-img[data-src]');
+        if(!candidates.length) return;
+
+        const reveal = (img) => {
+            if(img.dataset.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+            }
+            if(img.complete) {
+                img.classList.add('loaded');
+            }
+        };
+
+        candidates.forEach(img => {
+            if(!img.dataset.lazyBound) {
+                img.dataset.lazyBound = '1';
+                img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+            }
+        });
+
+        if(!('IntersectionObserver' in window)) {
+            candidates.forEach(reveal);
+            return;
+        }
+
+        if(!lazyImageObserver) {
+            lazyImageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) {
+                        const target = entry.target;
+                        reveal(target);
+                        observer.unobserve(target);
+                    }
+                });
+            }, { rootMargin: '100px 0px', threshold: 0.01 });
+        }
+
+        candidates.forEach(img => lazyImageObserver.observe(img));
     }
 
     function applySearchFilter() {
@@ -1028,6 +1187,125 @@
             });
         }
         renderGoods();
+    }
+
+    // --- REGISTER FRIEND ---
+
+    async function loadAddressesIfNeeded() {
+        if(state.addresses.length) return;
+        const payload = await fetchJson(API.addresses);
+        if(Array.isArray(payload)) {
+            state.addresses = payload;
+        } else if(Array.isArray(payload?.addresses)) {
+            state.addresses = payload.addresses;
+        } else {
+            state.addresses = [];
+        }
+        if(!state.addresses.length) {
+            throw new Error('No addresses available right now.');
+        }
+    }
+
+    function renderAddressOptions() {
+        if(!els.friendAddressSelect) return;
+        if(!state.addresses.length) {
+            els.friendAddressSelect.innerHTML = '<option value="">No addresses available</option>';
+            els.friendAddressSelect.disabled = true;
+            return;
+        }
+        const options = ['<option value="">Select address</option>'].concat(
+            state.addresses.map(address => {
+                const id = address.addressId ?? address.id;
+                const label = address.addressName || address.name || address.specificAddress || 'Address';
+                return `<option value="${id}">${label}</option>`;
+            })
+        );
+        els.friendAddressSelect.innerHTML = options.join('');
+        els.friendAddressSelect.disabled = false;
+    }
+
+    function resetRegisterFriendForm() {
+        if(!els.registerFriendForm) return;
+        els.registerFriendForm.reset();
+        els.registerFriendForm.classList.remove('was-validated');
+        showRegisterFriendFeedback('');
+        if(els.friendAddressSelect) {
+            els.friendAddressSelect.disabled = !state.addresses.length;
+        }
+    }
+
+    function showRegisterFriendFeedback(message, variant = 'danger') {
+        if(!els.registerFriendFeedback) return;
+        if(!message) {
+            els.registerFriendFeedback.classList.add('d-none');
+            els.registerFriendFeedback.textContent = '';
+            return;
+        }
+        els.registerFriendFeedback.textContent = message;
+        els.registerFriendFeedback.classList.remove('d-none', 'alert-danger', 'alert-warning', 'alert-success');
+        els.registerFriendFeedback.classList.add(`alert-${variant}`);
+    }
+
+    async function openRegisterFriendModal() {
+        if(!els.registerFriendModal) return;
+        try {
+            if(!state.addresses.length) {
+                if(els.friendAddressSelect) {
+                    els.friendAddressSelect.innerHTML = '<option value="">Loading addresses…</option>';
+                    els.friendAddressSelect.disabled = true;
+                }
+                await loadAddressesIfNeeded();
+            }
+            renderAddressOptions();
+            if(els.friendAddressSelect) {
+                els.friendAddressSelect.value = '';
+            }
+            showRegisterFriendFeedback('');
+            els.registerFriendModal.show();
+        } catch (error) {
+            console.error('Register friend modal failed', error);
+            showRegisterFriendFeedback(error.message || 'Unable to load addresses.', 'warning');
+        }
+    }
+
+    async function handleRegisterFriendSubmit(event) {
+        event.preventDefault();
+        if(!els.registerFriendForm) return;
+        if(!els.registerFriendForm.checkValidity()) {
+            els.registerFriendForm.classList.add('was-validated');
+            return;
+        }
+        const formData = new FormData(els.registerFriendForm);
+        const payload = {
+            name: (formData.get('name') || '').toString().trim(),
+            shopName: (formData.get('shopName') || '').toString().trim(),
+            phone: (formData.get('phone') || '').toString().trim(),
+            addressId: Number(formData.get('addressId')),
+            registerarCustomerId: state.session?.customerId
+        };
+        if(!payload.registerarCustomerId) {
+            redirectToLogin();
+            return;
+        }
+        if(els.registerFriendSubmitBtn) els.registerFriendSubmitBtn.disabled = true;
+        els.registerFriendSpinner?.classList.remove('d-none');
+        showRegisterFriendFeedback('');
+        try {
+            const response = await fetchJson(API.registerFriend, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            showToast('Friend registered', response?.message || 'We sent them their password via SMS.', 'success');
+            els.registerFriendModal?.hide();
+            resetRegisterFriendForm();
+        } catch (error) {
+            console.error('Register friend failed', error);
+            showRegisterFriendFeedback(error.message || 'Registration failed.');
+        } finally {
+            if(els.registerFriendSubmitBtn) els.registerFriendSubmitBtn.disabled = false;
+            els.registerFriendSpinner?.classList.add('d-none');
+        }
     }
 
     function handleSearchInput(event) {
@@ -1077,6 +1355,27 @@
                 })
                 .catch(() => {});
         });
+        els.placeOrderBtn?.addEventListener('click', () => {
+            handlePlaceOrder().catch(() => {});
+        });
+        els.clearCartBtn?.addEventListener('click', () => {
+            state.cart = [];
+            saveCart();
+        });
+        els.logoutBtn?.addEventListener('click', () => {
+            localStorage.removeItem(sessionKey);
+            window.location.href = 'login.html';
+        });
+        els.orderHistoryBtn?.addEventListener('click', () => {
+            window.location.href = 'orderHistory.html';
+        });
+        els.registerFriendBtn?.addEventListener('click', () => {
+            openRegisterFriendModal().catch(() => {});
+        });
+        els.registerFriendForm?.addEventListener('submit', (event) => {
+            handleRegisterFriendSubmit(event).catch(() => {});
+        });
+        els.registerFriendModalEl?.addEventListener('hidden.bs.modal', resetRegisterFriendForm);
     }
 
     // --- CART LOGIC ---
@@ -1127,26 +1426,32 @@
     }
 
     function updateCartUI() {
-        const count = state.cart.length;
-        els.cartBadge.textContent = count;
-        els.cartBadge.style.display = count ? 'block' : 'none';
-        els.navCartDot.classList.toggle('d-none', count === 0);
+        const uniqueCount = state.cart.length;
+        if(els.cartBadge) {
+            els.cartBadge.textContent = uniqueCount;
+            els.cartBadge.style.display = uniqueCount ? 'block' : 'none';
+        }
+        els.navCartDot?.classList.toggle('d-none', uniqueCount === 0);
 
-        // Render Cart Sheet List
-        const container = document.getElementById('cartItemsContainer');
-        if(!count) {
+        const container = els.cartItemsContainer;
+        if(!container) return;
+
+        if(!uniqueCount) {
             container.innerHTML = '<div class="text-center text-muted py-4">Cart is empty</div>';
-            document.getElementById('cartSummaryAmount').textContent = 'ETB 0.00';
+            if(els.cartSummaryAmount) els.cartSummaryAmount.textContent = 'ETB 0.00';
+            if(els.cartSummaryItems) els.cartSummaryItems.textContent = '0';
             return;
         }
 
         let total = 0;
+        let totalQuantity = 0;
         container.innerHTML = state.cart.map(i => {
             const itemTotal = i.price * i.quantity;
             total += itemTotal;
+            totalQuantity += i.quantity;
             return `
                 <div class="cart-item-mobile">
-                    <img src="${i.img}" alt="">
+                    <img src="${i.img || imagePlaceholder}" alt="${i.name || 'Goods'}">
                     <div class="flex-grow-1">
                         <div class="fw-bold line-clamp-1">${i.name}</div>
                         <div class="text-primary small">ETB ${i.price}</div>
@@ -1163,8 +1468,12 @@
             `;
         }).join('');
         
-        document.getElementById('cartSummaryAmount').textContent = 'ETB ' + total.toLocaleString();
-        document.getElementById('cartSummaryItems').textContent = count;
+        if(els.cartSummaryAmount) {
+            els.cartSummaryAmount.textContent = 'ETB ' + total.toLocaleString();
+        }
+        if(els.cartSummaryItems) {
+            els.cartSummaryItems.textContent = totalQuantity;
+        }
     }
 
     // --- DETAILS & OPTIONS ---
@@ -1173,7 +1482,7 @@
         const g = state.goods.find(x => x.goodsId == id);
         if(!g) return;
 
-        els.detailImg.src = g.imageUrl;
+        els.detailImg.src = g.imageUrl || imagePlaceholder;
         els.detailName.textContent = g.name;
         els.detailPrice.textContent = `ETB ${(g.primarySupplier?.price || g.lowestPrice).toLocaleString()}`;
         els.detailDesc.textContent = g.description || 'No description.';
@@ -1250,17 +1559,6 @@
         el.addEventListener('hidden.bs.toast', () => el.remove());
     }
     
-    // Logout
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem(sessionKey);
-        window.location.href = 'login.html';
-    });
-    
-    document.getElementById('clearCartBtn').addEventListener('click', () => {
-        state.cart = [];
-        saveCart();
-    });
-
     init();
 
 </script>
