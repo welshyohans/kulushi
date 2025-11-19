@@ -920,7 +920,7 @@
         }
 
         const html = visibleSuppliers.map(s => {
-            const avatar = s.logoUrl || s.logo || 'https://via.placeholder.com/60';
+            const avatar = s.image || s.logo || 'https://via.placeholder.com/60';
             return `
             <div class="supplier-story ${state.activeSupplier === s.shopId ? 'active' : ''}"
                  role="button"
