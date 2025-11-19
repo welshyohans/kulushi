@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <title>MerKato Pro — Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --primary-color: #2b59ff;
+            --primary-bg: #eef2ff;
+            --surface-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #1b2540;
+            --text-muted: #6c757d;
+            --nav-height: 65px;
+            --header-height: 60px;
+        }
+
+        body {
+            background-color: var(--surface-bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding-bottom: calc(var(--nav-height) + 20px);
+            padding-top: var(--header-height);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- Mobile Header --- */
+        .mobile-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1030;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .header-brand {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+            position: relative;
+            background: transparent;
+            border: none;
+        }
+
+        /* --- Search Bar --- */
+        .search-container {
+            padding: 0.5rem 1rem;
+            background: #fff;
+        }
+        
+        .search-input-group {
+            background: #f1f3f5;
+            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .search-input-group input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        /* --- Horizontal Scrolls (Netflix Style) --- */
+        .scroll-container {
+            overflow-x: auto;
+            display: flex;
+            gap: 1rem;
+            padding: 0.5rem 1rem 1rem 1rem;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        
+        .scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-pill {
+            flex: 0 0 auto;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 50rem;
+            padding: 0.6rem 1.2rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+
+        .category-pill.active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(43, 89, 255, 0.3);
+        }
+
+        /* --- Supplier Avatars --- */
+        .supplier-story {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 70px;
+            gap: 0.3rem;
+        }
+
+        .supplier-story-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid var(--primary-color);
+            padding: 2px;
+            object-fit: contain;
+        }
+        
+        .supplier-story.active .supplier-story-img {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        .supplier-story span {
+            font-size: 0.75rem;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* --- Product Grid --- */
+        .goods-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            padding: 0 1rem 1rem 1rem;
+        }
+
+        .mobile-card {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .mobile-card-img-wrapper {
+            position: relative;
+            padding-top: 100%; /* 1:1 Aspect Ratio */
+            background: #f8f9fa;
+        }
+
+        .mobile-card-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .mobile-card-body {
+            padding: 0.75rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 0.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .mobile-card-price {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            margin-top: auto;
+        }
+
+        .mobile-add-btn {
+            width: 100%;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        /* --- Quantity Control (Compact) --- */
+        .qty-compact {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--primary-bg);
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            height: 36px;
+        }
+        
+        .qty-compact button {
+            width: 32px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Bottom Navigation --- */
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0,0,0,0.05);
+            height: var(--nav-height);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1040;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-item-mobile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #949db5;
+            background: none;
+            border: none;
+            width: 100%;
+            height: 100%;
+            gap: 4px;
+        }
+
+        .nav-item-mobile.active {
+            color: var(--primary-color);
+        }
+
+        .nav-item-mobile i {
+            font-size: 1.4rem;
+        }
+
+        .nav-item-mobile span {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* --- Bottom Sheet (Offcanvas) Customization --- */
+        .offcanvas-bottom {
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            height: auto;
+            max-height: 85vh;
+        }
+        
+        .offcanvas-header {
+            padding-bottom: 0;
+        }
+
+        .drag-handle {
+            width: 40px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            margin: 0 auto 1rem auto;
+        }
+
+        /* --- Cart Item Mobile --- */
+        .cart-item-mobile {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .cart-item-mobile img {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: #f8f9fa;
+        }
+        
+        /* Loader & Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        
+        /* Desktop/Large Screen Guard */
+        @media (min-width: 992px) {
+            body {
+                display: grid;
+                place-items: center;
+                height: 100vh;
+                background: #eee;
+                padding: 0;
+            }
+            .mobile-wrapper {
+                width: 375px;
+                height: 812px;
+                background: #fff;
+                overflow-y: auto;
+                border-radius: 24px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                position: relative;
+                padding-top: var(--header-height);
+                padding-bottom: var(--nav-height);
+            }
+            .mobile-nav, .mobile-header {
+                position: absolute;
+                width: 100%;
+            }
+            .offcanvas { position: absolute; }
+        }
+        @media (max-width: 991.98px) {
+            .mobile-wrapper { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="mobile-wrapper">
+    <!-- Header -->
+    <header class="mobile-header justify-content-between">
+        <div class="header-brand">MerKato Pro</div>
+        <div class="header-actions d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary-subtle text-primary rounded-pill me-2" id="customerNameBadge">...</span>
+            </div>
+            <button class="btn-icon" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+                <i class="bi bi-bag"></i>
+                <span class="position-absolute top-0 start-75 translate-middle badge rounded-pill bg-danger border border-light p-1" id="cartCountBadge" style="font-size:0.6rem; display:none;">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Search -->
+    <div class="search-container">
+        <div class="search-input-group">
+            <i class="bi bi-search text-muted"></i>
+            <input type="search" id="globalSearchInput" placeholder="Search goods, suppliers...">
+        </div>
+    </div>
+
+    <main id="mainContent">
+        
+        <!-- Screen: Home -->
+        <div id="homeScreen" class="screen-section fade show">
+            
+            <!-- Suppliers List (Instagram Stories style) -->
+            <div class="d-flex justify-content-between px-3 pt-2 align-items-center">
+                <small class="fw-bold text-uppercase text-muted">Suppliers</small>
+                <small class="text-primary" id="homeSuppliersStat">0 Active</small>
+            </div>
+            <div class="scroll-container" id="supplierList">
+                <!-- JS Injected -->
+                <div class="supplier-story">
+                    <div class="skeleton" style="width:60px; height:60px; border-radius:50%"></div>
+                    <div class="skeleton" style="width:40px; height:10px;"></div>
+                </div>
+            </div>
+
+            <!-- Categories (Chips) -->
+            <div class="scroll-container py-2" id="homeCategoryChips">
+                <button class="category-pill active">All</button>
+                <button class="category-pill">Drinks</button>
+                <button class="category-pill">Food</button>
+            </div>
+
+            <!-- Banner -->
+            <div class="px-3 pb-3">
+                <div class="p-3 rounded-4 text-white d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #2b59ff 0%, #587dff 100%); box-shadow: 0 10px 20px -10px rgba(43, 89, 255, 0.5);">
+                    <div>
+                        <h5 class="fw-bold mb-1">Get the App</h5>
+                        <p class="small mb-2 opacity-75">Faster ordering &amp; tracking</p>
+                        <a href="app/merkatopro.apk" class="btn btn-light btn-sm rounded-pill fw-bold text-primary px-3" style="font-size: 0.8rem">Download</a>
+                    </div>
+                    <i class="bi bi-phone fs-1 opacity-50"></i>
+                </div>
+            </div>
+
+            <!-- Goods Grid -->
+            <div class="d-flex justify-content-between px-3 align-items-end mb-2">
+                <h2 class="h5 fw-bold mb-0">Fresh Goods</h2>
+                <button class="btn btn-link p-0 text-decoration-none small" id="reloadFeaturedBtn">Refresh</button>
+            </div>
+            
+            <div class="goods-grid" id="goodsGrid">
+                <!-- JS Injected -->
+            </div>
+
+            <div class="text-center py-3">
+                <button class="btn btn-outline-primary rounded-pill px-4" id="loadMoreGoodsBtn">Load More</button>
+            </div>
+        </div>
+
+        <!-- Screen: Profile (Hidden by default) -->
+        <div id="profileScreen" class="screen-section d-none p-3">
+            <h2 class="h4 fw-bold mb-4">My Profile</h2>
+            
+            <div class="card border-0 shadow-sm rounded-4 mb-3">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:50px; height:50px; font-size:1.2rem">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0" id="profileSummaryName">Loading...</h5>
+                        <p class="text-muted small mb-0" id="profileSummaryShop">...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="list-group rounded-4 border-0 shadow-sm mb-4 overflow-hidden">
+                <button class="list-group-item list-group-item-action border-0 py-3 d-flex justify-content-between align-items-center" id="orderHistoryBtn">
+                    <span><i class="bi bi-clock-history me-2 text-primary"></i> Order History</span>
+                    <i class="bi bi-chevron-right small text-muted"></i>
+                </button>
+                <button class="list-group-item list-group-item-action border-0 py-3 d-flex justify-content-between align-items-center" id="registerFriendBtn">
+                    <span><i class="bi bi-person-plus me-2 text-primary"></i> Register Friend</span>
+                    <i class="bi bi-chevron-right small text-muted"></i>
+                </button>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-3 p-3 bg-white">
+                <h6 class="text-uppercase text-muted small fw-bold mb-2">Details</h6>
+                <p class="mb-1 small"><i class="bi bi-telephone me-2"></i> <span id="profileSummaryPhone">...</span></p>
+                <p class="mb-0 small"><i class="bi bi-geo-alt me-2"></i> <span id="profileAddress">...</span></p>
+            </div>
+
+            <button class="btn btn-danger w-100 rounded-pill py-2 mt-2" id="logoutBtn">
+                <i class="bi bi-box-arrow-right me-2"></i> Logout
+            </button>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="mobile-nav">
+        <button class="nav-item-mobile active" data-screen-target="homeScreen" onclick="resetToHome()">
+            <i class="bi bi-house-door-fill"></i>
+            <span>Home</span>
+        </button>
+        <button class="nav-item-mobile" data-screen-target="searchFocus" onclick="focusSearch()">
+            <i class="bi bi-search"></i>
+            <span>Search</span>
+        </button>
+        <button class="nav-item-mobile" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+            <div class="position-relative">
+                <i class="bi bi-bag-fill"></i>
+                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle d-none" id="navCartDot"></span>
+            </div>
+            <span>Cart</span>
+        </button>
+        <button class="nav-item-mobile" data-screen-target="profileScreen">
+            <i class="bi bi-person-fill"></i>
+            <span>Profile</span>
+        </button>
+    </nav>
+
+</div>
+
+<!-- --- OFF CANVAS COMPONENTS (Replaces Modals) --- -->
+
+<!-- Cart Sheet -->
+<div class="offcanvas offcanvas-bottom" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
+    <div class="offcanvas-header justify-content-center pb-0">
+        <div class="drag-handle"></div>
+    </div>
+    <div class="offcanvas-body pt-1">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="offcanvas-title fw-bold" id="cartOffcanvasLabel">Your Cart</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <div id="cartItemsContainer" class="d-flex flex-column gap-2 mb-4" style="min-height: 100px;">
+            <!-- Cart Items Injected Here -->
+        </div>
+
+        <div class="bg-light rounded-4 p-3 mb-3">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Items</span>
+                <span class="fw-semibold" id="cartSummaryItems">0</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted fw-bold">Total</span>
+                <span class="fs-4 fw-bold text-primary" id="cartSummaryAmount">ETB 0.00</span>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 d-flex">
+            <button class="btn btn-outline-secondary flex-grow-0" id="clearCartBtn"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-primary flex-grow-1 rounded-pill py-2 fw-bold" id="placeOrderBtn">
+                Place Order
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Product Details Sheet -->
+<div class="offcanvas offcanvas-bottom" tabindex="-1" id="detailOffcanvas" style="height: 85vh;">
+    <div class="offcanvas-body p-0 position-relative">
+        <button type="button" class="btn-close position-absolute top-0 end-0 m-3 bg-white p-2 rounded-circle shadow-sm" data-bs-dismiss="offcanvas" style="z-index:10; opacity:1"></button>
+        
+        <img id="detailImage" src="" class="w-100 object-fit-cover" style="height: 350px; background:#f0f0f0" alt="Product">
+        
+        <div class="p-4 position-relative bg-white" style="border-radius: 24px 24px 0 0; margin-top: -24px;">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <span class="badge bg-light text-dark border mb-2" id="detailCategory">Category</span>
+                    <h3 class="fw-bold mb-1" id="detailName">Product Name</h3>
+                    <div class="text-muted small" id="detailSupplier"><i class="bi bi-shop me-1"></i> Supplier Name</div>
+                </div>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2 my-3">
+                <h2 class="text-primary fw-bold mb-0" id="detailPrice">ETB 0.00</h2>
+            </div>
+
+            <div class="mb-4">
+                <h6 class="fw-bold">Description</h6>
+                <p class="text-muted small" id="detailDescription">...</p>
+            </div>
+
+            <!-- Sticky Bottom Action in Sheet -->
+            <div class="d-grid">
+                <button class="btn btn-primary btn-lg rounded-pill fw-bold" id="detailAddToCartBtn">
+                    Add to Cart
+                </button>
+            </div>
+            
+            <div class="mt-4 border-top pt-3">
+                <h6 class="fw-bold mb-3">Reviews</h6>
+                <div id="detailComments" class="d-flex flex-column gap-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Register Friend Modal (Keep as modal, less frequent action) -->
+<div class="modal fade" id="registerFriendModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered px-3">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Register Friend</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="registerFriendForm">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Friend Name</label>
+                        <input type="text" class="form-control bg-light border-0" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Shop Name</label>
+                        <input type="text" class="form-control bg-light border-0" name="shopName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Phone</label>
+                        <input type="tel" class="form-control bg-light border-0" name="phone" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Address</label>
+                        <select class="form-select bg-light border-0" name="addressId" id="friendAddressSelect" required></select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-2" id="registerFriendSubmitBtn">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Options Modal (As Bottom Sheet) -->
+<div class="offcanvas offcanvas-bottom" tabindex="-1" id="optionsOffcanvas" style="height: auto; max-height: 70vh;">
+    <div class="offcanvas-header pb-0">
+        <h5 class="offcanvas-title fw-bold" id="optionsModalLabel">Select Supplier</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div id="optionsList" class="d-flex flex-column gap-2"></div>
+    </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" id="toastContainer" style="z-index: 2000;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- LOGIC SCRIPT (Adapted for Mobile Redesign) -->
+<script type="module">
+    // --- API & STATE (Same as before, simplified selectors) ---
+    const sessionKey = 'mproSession';
+    const cartKey = 'mproCartItems';
+    
+    const API = {
+        featuredGoods: 'api/dashboard/getFeaturedGoods.php',
+        goodsByCategory: (categoryId, offset=0) => `api/dashboard/getGoodsByCategory.php?categoryId=${categoryId}&offset=${offset}&limit=20`,
+        goodsBySupplier: (supplierId) => `api/dashboard/getGoodsBySupplier.php?supplierId=${supplierId}`,
+        supplierOptions: (goodsId) => `api/dashboard/getSupplierGoodsOptions.php?goodsId=${goodsId}`,
+        categories: 'api/dashboard/getCategories.php',
+        suppliers: 'api/dashboard/getSuppliers.php',
+        profile: 'api/customer/profile.php',
+        comments: 'api/comment/getComments.php',
+        orderFromCart: 'api/order/createFromCart.php',
+        registerFriend: 'api/customer/registerYourFriend.php',
+        addresses: 'api/address/getAllAddress.php'
+    };
+
+    // --- ELEMENTS ---
+    const els = {
+        goodsGrid: document.getElementById('goodsGrid'),
+        supplierList: document.getElementById('supplierList'),
+        categoryChips: document.getElementById('homeCategoryChips'),
+        cartOffcanvas: new bootstrap.Offcanvas('#cartOffcanvas'),
+        detailOffcanvas: new bootstrap.Offcanvas('#detailOffcanvas'),
+        optionsOffcanvas: new bootstrap.Offcanvas('#optionsOffcanvas'),
+        registerFriendModal: new bootstrap.Modal('#registerFriendModal'),
+        toastContainer: document.getElementById('toastContainer'),
+        globalSearch: document.getElementById('globalSearchInput'),
+        
+        // Dynamic Badges
+        customerName: document.getElementById('customerNameBadge'),
+        cartBadge: document.getElementById('cartCountBadge'),
+        navCartDot: document.getElementById('navCartDot'),
+        
+        // Profile
+        profileName: document.getElementById('profileSummaryName'),
+        profileShop: document.getElementById('profileSummaryShop'),
+        profilePhone: document.getElementById('profileSummaryPhone'),
+        profileAddress: document.getElementById('profileAddress'),
+        
+        // Details
+        detailImg: document.getElementById('detailImage'),
+        detailName: document.getElementById('detailName'),
+        detailPrice: document.getElementById('detailPrice'),
+        detailDesc: document.getElementById('detailDescription'),
+        detailSupplier: document.getElementById('detailSupplier'),
+        detailComments: document.getElementById('detailComments'),
+        detailAddBtn: document.getElementById('detailAddToCartBtn')
+    };
+
+    const state = {
+        session: null,
+        cart: [],
+        goods: [],
+        activeCategory: null,
+        activeSupplier: null,
+        loading: false,
+        offset: 0
+    };
+
+    // --- CORE FUNCTIONS ---
+
+    function init() {
+        const raw = localStorage.getItem(sessionKey);
+        if(!raw) return window.location.href = 'login.html';
+        state.session = JSON.parse(raw);
+
+        state.cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        updateCartUI();
+
+        fetchProfile();
+        fetchInitialData();
+        attachEvents();
+    }
+
+    async function fetchJson(url, opts) {
+        try {
+            const res = await fetch(url, opts);
+            if(!res.ok) throw new Error('Network error');
+            return await res.json();
+        } catch(e) {
+            showToast('Error', e.message, 'danger');
+            throw e;
+        }
+    }
+
+    async function fetchProfile() {
+        const data = await fetchJson(API.profile, { 
+            method: 'POST', 
+            body: JSON.stringify({ customerId: state.session.customerId }) 
+        });
+        if(data.success && data.profile) {
+            const p = data.profile;
+            els.customerName.textContent = p.name || 'User';
+            els.profileName.textContent = p.name;
+            els.profileShop.textContent = p.shopName;
+            els.profilePhone.textContent = p.phone;
+            els.profileAddress.textContent = `${p.address?.subCity || ''}, ${p.specificAddress || ''}`;
+        }
+    }
+
+    async function fetchInitialData() {
+        // Load Categories & Suppliers
+        const [cats, sups] = await Promise.all([
+            fetchJson(API.categories),
+            fetchJson(API.suppliers)
+        ]);
+
+        renderCategories(cats.categories || []);
+        renderSuppliers(sups.suppliers || []);
+        
+        // Load Goods
+        loadGoods('home');
+    }
+
+    async function loadGoods(context, id = null, append = false) {
+        if(state.loading) return;
+        state.loading = true;
+        
+        if(!append) {
+            els.goodsGrid.innerHTML = '<div class="col-span-2 text-center py-4 text-muted">Loading...</div>';
+            state.offset = 0;
+            state.goods = [];
+        }
+
+        try {
+            let url = '';
+            if(context === 'home') url = `${API.featuredGoods}?offset=${state.offset}&limit=20`;
+            else if(context === 'category') url = API.goodsByCategory(id, state.offset);
+            else if(context === 'supplier') url = API.goodsBySupplier(id);
+
+            const data = await fetchJson(url);
+            
+            // Data normalization for supplier endpoint differences
+            let newGoods = data.goods || [];
+            if(context === 'supplier') {
+                // Normalize structure if needed based on original logic
+                newGoods = newGoods.map(g => ({...g, primarySupplier: { ...data.supplier, price: g.price } }));
+            }
+
+            if(append) state.goods = [...state.goods, ...newGoods];
+            else state.goods = newGoods;
+
+            renderGoods();
+            state.offset += 20;
+
+        } catch(e) {
+            els.goodsGrid.innerHTML = '<div class="p-3 text-center">Failed to load goods</div>';
+        } finally {
+            state.loading = false;
+        }
+    }
+
+    // --- RENDERING ---
+
+    function renderSuppliers(list) {
+        const html = list.filter(s => s.isVisible == 1).map(s => `
+            <div class="supplier-story ${state.activeSupplier === s.shopId ? 'active' : ''}" 
+                 onclick="handleSupplierClick(${s.shopId})">
+                <img src="https://via.placeholder.com/60" class="supplier-story-img" alt="s">
+                <span>${s.shopName}</span>
+            </div>
+        `).join('');
+        els.supplierList.innerHTML = html;
+    }
+
+    window.handleSupplierClick = (id) => {
+        state.activeSupplier = id;
+        state.activeCategory = null;
+        document.querySelectorAll('.supplier-story').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        loadGoods('supplier', id);
+    };
+
+    function renderCategories(list) {
+        let html = `<button class="category-pill ${state.activeCategory === null ? 'active' : ''}" onclick="handleCatClick(null)">All</button>`;
+        html += list.filter(c => c.isAvailable == 1).map(c => `
+            <button class="category-pill ${state.activeCategory === c.id ? 'active' : ''}" 
+                    onclick="handleCatClick(${c.id})">${c.name}</button>
+        `).join('');
+        els.categoryChips.innerHTML = html;
+    }
+
+    window.handleCatClick = (id) => {
+        state.activeCategory = id;
+        state.activeSupplier = null;
+        renderCategories(state.goods); // Re-render just to update active class visually if we had full list, 
+        // in real implementation simpler to just toggle class
+        const pills = els.categoryChips.querySelectorAll('.category-pill');
+        pills.forEach(p => p.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        loadGoods(id ? 'category' : 'home', id);
+    };
+
+    function renderGoods() {
+        if(!state.goods.length) {
+            els.goodsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:2rem;">No goods found</div>`;
+            return;
+        }
+
+        els.goodsGrid.innerHTML = state.goods.map(g => {
+            const price = g.primarySupplier?.price || g.lowestPrice || 0;
+            const cartItem = state.cart.find(i => i.goodsId == g.goodsId);
+            const qty = cartItem ? cartItem.quantity : 0;
+
+            return `
+            <article class="mobile-card" onclick="openDetail(${g.goodsId})">
+                <div class="mobile-card-img-wrapper">
+                    <img src="${g.imageUrl || 'https://via.placeholder.com/200'}" class="mobile-card-img" loading="lazy">
+                    ${g.discount ? `<span class="position-absolute top-0 start-0 badge bg-danger m-2">-${g.discount}%</span>` : ''}
+                </div>
+                <div class="mobile-card-body">
+                    <div class="mobile-card-title">${g.name}</div>
+                    <div class="text-muted small mb-1" style="font-size:0.75rem">${g.supplierName || g.primarySupplier?.shopName || 'Supplier'}</div>
+                    <div class="mobile-card-price">ETB ${parseFloat(price).toLocaleString()}</div>
+                    
+                    <div onclick="event.stopPropagation()">
+                        ${qty > 0 ? `
+                            <div class="qty-compact">
+                                <button onclick="updateCart(${g.goodsId}, -1)">-</button>
+                                <span class="fw-bold text-dark">${qty}</span>
+                                <button onclick="updateCart(${g.goodsId}, 1)">+</button>
+                            </div>
+                        ` : `
+                            <button class="btn btn-primary mobile-add-btn bg-primary bg-opacity-10 text-primary border-0" 
+                                    onclick="addToCartInit(${g.goodsId})">
+                                ADD
+                            </button>
+                        `}
+                    </div>
+                </div>
+            </article>
+            `;
+        }).join('');
+    }
+
+    // --- CART LOGIC ---
+
+    window.addToCartInit = (id) => {
+        const g = state.goods.find(x => x.goodsId == id);
+        if(!g) return;
+        
+        // Check options
+        if(g.supplierOffers && g.supplierOffers.length > 1) {
+            showOptions(g);
+            return;
+        }
+        
+        // Add Default
+        const item = {
+            goodsId: g.goodsId,
+            name: g.name,
+            price: g.primarySupplier?.price || g.lowestPrice,
+            quantity: g.primarySupplier?.minOrder || 1,
+            img: g.imageUrl,
+            supplierGoodsId: g.primarySupplier?.supplierGoodsId
+        };
+        
+        addToCartRaw(item);
+    };
+
+    function addToCartRaw(item) {
+        const existing = state.cart.find(i => i.goodsId == item.goodsId && i.supplierGoodsId == item.supplierGoodsId);
+        if(existing) existing.quantity++;
+        else state.cart.push(item);
+        saveCart();
+    }
+
+    window.updateCart = (goodsId, delta) => {
+        const idx = state.cart.findIndex(i => i.goodsId == goodsId);
+        if(idx === -1) return;
+        
+        state.cart[idx].quantity += delta;
+        if(state.cart[idx].quantity <= 0) state.cart.splice(idx, 1);
+        saveCart();
+    }
+
+    function saveCart() {
+        localStorage.setItem(cartKey, JSON.stringify(state.cart));
+        updateCartUI();
+        renderGoods(); // Update buttons in grid
+    }
+
+    function updateCartUI() {
+        const count = state.cart.length;
+        els.cartBadge.textContent = count;
+        els.cartBadge.style.display = count ? 'block' : 'none';
+        els.navCartDot.classList.toggle('d-none', count === 0);
+
+        // Render Cart Sheet List
+        const container = document.getElementById('cartItemsContainer');
+        if(!count) {
+            container.innerHTML = '<div class="text-center text-muted py-4">Cart is empty</div>';
+            document.getElementById('cartSummaryAmount').textContent = 'ETB 0.00';
+            return;
+        }
+
+        let total = 0;
+        container.innerHTML = state.cart.map(i => {
+            const itemTotal = i.price * i.quantity;
+            total += itemTotal;
+            return `
+                <div class="cart-item-mobile">
+                    <img src="${i.img}" alt="">
+                    <div class="flex-grow-1">
+                        <div class="fw-bold line-clamp-1">${i.name}</div>
+                        <div class="text-primary small">ETB ${i.price}</div>
+                    </div>
+                    <div class="d-flex flex-column align-items-end">
+                        <div class="qty-compact" style="width: 90px; height: 32px;">
+                            <button onclick="updateCart(${i.goodsId}, -1)">-</button>
+                            <span class="small fw-bold text-dark">${i.quantity}</span>
+                            <button onclick="updateCart(${i.goodsId}, 1)">+</button>
+                        </div>
+                        <div class="small fw-bold mt-1">ETB ${itemTotal.toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        document.getElementById('cartSummaryAmount').textContent = 'ETB ' + total.toLocaleString();
+        document.getElementById('cartSummaryItems').textContent = count;
+    }
+
+    // --- DETAILS & OPTIONS ---
+
+    window.openDetail = async (id) => {
+        const g = state.goods.find(x => x.goodsId == id);
+        if(!g) return;
+
+        els.detailImg.src = g.imageUrl;
+        els.detailName.textContent = g.name;
+        els.detailPrice.textContent = `ETB ${(g.primarySupplier?.price || g.lowestPrice).toLocaleString()}`;
+        els.detailDesc.textContent = g.description || 'No description.';
+        els.detailSupplier.textContent = g.primarySupplier?.shopName || 'Supplier';
+        
+        els.detailAddBtn.onclick = () => {
+            addToCartInit(id);
+            els.detailOffcanvas.hide();
+            showToast('Added', 'Item added to cart', 'success');
+        };
+
+        // Load comments
+        els.detailComments.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+        els.detailOffcanvas.show();
+        
+        try {
+            const comments = await fetchJson(API.comments, { method:'POST', body: JSON.stringify({goodsId: id}) });
+            if(Array.isArray(comments) && comments.length) {
+                els.detailComments.innerHTML = comments.map(c => `
+                    <div class="bg-light rounded-3 p-3 mb-2">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="fw-bold small">${c.customerName}</span>
+                            <span class="text-warning small">★ ${c.StarValue}</span>
+                        </div>
+                        <p class="mb-0 small text-muted">${c.comment}</p>
+                    </div>
+                `).join('');
+            } else {
+                els.detailComments.innerHTML = '<div class="text-muted small">No reviews yet.</div>';
+            }
+        } catch(e) { els.detailComments.innerHTML = ''; }
+    };
+
+    // --- NAVIGATION & UTIL ---
+
+    window.resetToHome = () => {
+        document.querySelectorAll('.screen-section').forEach(el => el.classList.add('d-none'));
+        document.getElementById('homeScreen').classList.remove('d-none');
+        updateNavActive(0);
+    };
+
+    // Simple nav switching logic
+    document.querySelectorAll('[data-screen-target]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = btn.dataset.screenTarget;
+            if(target === 'searchFocus') return; // Handled by focusSearch
+            
+            document.querySelectorAll('.screen-section').forEach(el => el.classList.add('d-none'));
+            const targetEl = document.getElementById(target);
+            if(targetEl) targetEl.classList.remove('d-none');
+
+            document.querySelectorAll('.nav-item-mobile').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    window.focusSearch = () => {
+        els.globalSearch.focus();
+    };
+
+    function showToast(title, body, type='primary') {
+        const id = 'toast' + Date.now();
+        const h = `
+        <div id="${id}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body"><strong>${title}</strong> ${body}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`;
+        els.toastContainer.insertAdjacentHTML('beforeend', h);
+        const el = document.getElementById(id);
+        const t = new bootstrap.Toast(el);
+        t.show();
+        el.addEventListener('hidden.bs.toast', () => el.remove());
+    }
+    
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem(sessionKey);
+        window.location.href = 'login.html';
+    });
+    
+    document.getElementById('clearCartBtn').addEventListener('click', () => {
+        state.cart = [];
+        saveCart();
+    });
+
+    init();
+
+</script>
+</body>
+</html>
