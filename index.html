@@ -166,6 +166,16 @@
             padding: 0 1rem 1rem 1rem;
         }
 
+        .goods-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .goods-load-more {
+            margin-top: auto;
+        }
+
         .mobile-card {
             background: #fff;
             border-radius: 16px;
@@ -445,17 +455,19 @@
             </div>
 
             <!-- Goods Grid -->
-            <div class="d-flex justify-content-between px-3 align-items-end mb-2">
-                <h2 class="h5 fw-bold mb-0">Fresh Goods</h2>
-                <button class="btn btn-link p-0 text-decoration-none small" id="reloadFeaturedBtn">Refresh</button>
-            </div>
-            
-            <div class="goods-grid" id="goodsGrid">
-                <!-- JS Injected -->
-            </div>
+            <div class="goods-section px-3">
+                <div class="d-flex justify-content-between align-items-end mb-2">
+                    <h2 class="h5 fw-bold mb-0">Fresh Goods</h2>
+                    <button class="btn btn-link p-0 text-decoration-none small" id="reloadFeaturedBtn">Refresh</button>
+                </div>
 
-            <div class="text-center py-3">
-                <button class="btn btn-outline-primary rounded-pill px-4" id="loadMoreGoodsBtn">Load More</button>
+                <div class="goods-grid" id="goodsGrid">
+                    <!-- JS Injected -->
+                </div>
+
+                <div class="text-center py-3 goods-load-more">
+                    <button class="btn btn-outline-primary rounded-pill px-4" id="loadMoreGoodsBtn">Load More</button>
+                </div>
             </div>
         </div>
 
