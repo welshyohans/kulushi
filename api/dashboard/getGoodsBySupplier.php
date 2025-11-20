@@ -44,6 +44,7 @@ $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
 $limitPlusOne = $limit + 1;
 $rawSearch = trim((string)($_GET['q'] ?? $_GET['search'] ?? ''));
 $searchTerm = $rawSearch !== '' ? '%' . $rawSearch . '%' : null;
+$searchBindings = [];
 
 require_once __DIR__ . '/../../config/Database.php';
 
@@ -90,10 +91,15 @@ try {
 
     if ($searchTerm !== null) {
         $goodsQuery .= ' AND (
-            g.name LIKE :searchTerm
-            OR g.description LIKE :searchTerm
-            OR c.name LIKE :searchTerm
+            g.name LIKE :search_name
+            OR g.description LIKE :search_description
+            OR c.name LIKE :search_category
         )';
+        $searchBindings = [
+            ':search_name' => $searchTerm,
+            ':search_description' => $searchTerm,
+            ':search_category' => $searchTerm
+        ];
     }
 
     $goodsQuery .= ' ORDER BY g.priority DESC, sg.price ASC, sg.min_order ASC
@@ -101,8 +107,8 @@ try {
 
     $goodsStmt = $db->prepare($goodsQuery);
     $goodsStmt->bindValue(':supplierId', $supplierId, PDO::PARAM_INT);
-    if ($searchTerm !== null) {
-        $goodsStmt->bindValue(':searchTerm', $searchTerm, PDO::PARAM_STR);
+    foreach ($searchBindings as $placeholder => $value) {
+        $goodsStmt->bindValue($placeholder, $value, PDO::PARAM_STR);
     }
     $goodsStmt->bindValue(':limitPlusOne', $limitPlusOne, PDO::PARAM_INT);
     $goodsStmt->bindValue(':offset', $offset, PDO::PARAM_INT);

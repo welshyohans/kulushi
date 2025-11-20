@@ -44,6 +44,7 @@ $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
 $limitPlusOne = $limit + 1;
 $rawSearch = trim((string)($_GET['q'] ?? $_GET['search'] ?? ''));
 $searchTerm = $rawSearch !== '' ? '%' . $rawSearch . '%' : null;
+$searchBindings = [];
 
 require_once __DIR__ . '/../../config/Database.php';
 
@@ -70,9 +71,9 @@ try {
 
     if ($searchTerm !== null) {
         $goodsQuery .= ' AND (
-            g.name LIKE :searchTerm
-            OR g.description LIKE :searchTerm
-            OR c.name LIKE :searchTerm
+            g.name LIKE :search_name
+            OR g.description LIKE :search_description
+            OR c.name LIKE :search_category
             OR EXISTS (
                 SELECT 1
                 FROM supplier_goods sg2
@@ -80,11 +81,18 @@ try {
                 WHERE sg2.goods_id = g.id
                   AND sg2.is_available = 1
                   AND (
-                    s2.shop_name LIKE :searchTerm
-                    OR s2.shop_type LIKE :searchTerm
+                    s2.shop_name LIKE :search_supplier_name
+                    OR s2.shop_type LIKE :search_supplier_type
                   )
             )
         )';
+        $searchBindings = [
+            ':search_name' => $searchTerm,
+            ':search_description' => $searchTerm,
+            ':search_category' => $searchTerm,
+            ':search_supplier_name' => $searchTerm,
+            ':search_supplier_type' => $searchTerm
+        ];
     }
 
     $goodsQuery .= ' ORDER BY g.priority DESC, g.id DESC
@@ -92,8 +100,8 @@ try {
 
     $goodsStmt = $db->prepare($goodsQuery);
     $goodsStmt->bindValue(':categoryId', $categoryId, PDO::PARAM_INT);
-    if ($searchTerm !== null) {
-        $goodsStmt->bindValue(':searchTerm', $searchTerm, PDO::PARAM_STR);
+    foreach ($searchBindings as $placeholder => $value) {
+        $goodsStmt->bindValue($placeholder, $value, PDO::PARAM_STR);
     }
     $goodsStmt->bindValue(':limitPlusOne', $limitPlusOne, PDO::PARAM_INT);
     $goodsStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
