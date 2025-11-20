@@ -783,6 +783,20 @@
         }
     };
 
+    function normalizeCartItem(raw) {
+        if(!raw || typeof raw !== 'object') return null;
+        const normalized = { ...raw };
+        normalized.goodsId = raw.goodsId ?? raw.id;
+        if(!normalized.goodsId) return null;
+        normalized.price = Number(raw.price) || 0;
+        normalized.commission = Number(raw.commission) || 0;
+        normalized.quantity = Math.max(1, Number(raw.quantity) || 1);
+        normalized.supplierGoodsId = raw.supplierGoodsId ?? raw.goodsId ?? raw.id;
+        normalized.name = raw.name || '';
+        normalized.img = raw.img || '';
+        return normalized;
+    }
+
     // --- CORE FUNCTIONS ---
 
     function redirectToLogin() {
@@ -812,7 +826,9 @@
 
         try {
             const storedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
-            state.cart = Array.isArray(storedCart) ? storedCart : [];
+            state.cart = Array.isArray(storedCart)
+                ? storedCart.map(item => normalizeCartItem(item)).filter(Boolean)
+                : [];
         } catch (_) {
             state.cart = [];
         }
@@ -1410,6 +1426,7 @@
             goodsId: g.goodsId,
             name: g.name,
             price: g.primarySupplier?.price || g.lowestPrice,
+            commission: Number(g.commission) || 0,
             quantity: g.primarySupplier?.minOrder || 1,
             img: g.imageUrl,
             supplierGoodsId: g.primarySupplier?.supplierGoodsId
@@ -1419,9 +1436,12 @@
     };
 
     function addToCartRaw(item) {
-        const existing = state.cart.find(i => i.goodsId == item.goodsId && i.supplierGoodsId == item.supplierGoodsId);
+        const normalizedItem = normalizeCartItem(item);
+        if(!normalizedItem) return;
+
+        const existing = state.cart.find(i => i.goodsId == normalizedItem.goodsId && i.supplierGoodsId == normalizedItem.supplierGoodsId);
         if(existing) existing.quantity++;
-        else state.cart.push(item);
+        else state.cart.push(normalizedItem);
         saveCart();
     }
 
@@ -1461,7 +1481,9 @@
         let total = 0;
         let totalQuantity = 0;
         container.innerHTML = state.cart.map(i => {
-            const itemTotal = i.price * i.quantity;
+            const unitPrice = Number(i.price) || 0;
+            const unitCommission = Number(i.commission) || 0;
+            const itemTotal = (unitPrice + unitCommission) * i.quantity;
             total += itemTotal;
             totalQuantity += i.quantity;
             return `
@@ -1469,7 +1491,8 @@
                     <img src="${i.img || imagePlaceholder}" alt="${i.name || 'Goods'}">
                     <div class="flex-grow-1">
                         <div class="fw-bold line-clamp-1">${i.name}</div>
-                        <div class="text-primary small">ETB ${i.price}</div>
+                        <div class="text-primary small">Price: ETB ${unitPrice.toLocaleString()}</div>
+                        <div class="text-muted small">Commission: ETB ${unitCommission.toLocaleString()}</div>
                     </div>
                     <div class="d-flex flex-column align-items-end">
                         <div class="qty-compact" style="width: 90px; height: 32px;">
