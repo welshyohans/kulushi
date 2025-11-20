@@ -670,11 +670,21 @@
     // --- API & STATE (Same as before, simplified selectors) ---
     const sessionKey = 'mproSession';
     const cartKey = 'mproCartItems';
+
+    const buildApiUrl = (path, params = {}) => {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if(value === undefined || value === null || value === '') return;
+            query.append(key, value);
+        });
+        const qs = query.toString();
+        return qs ? `${path}?${qs}` : path;
+    };
     
     const API = {
-        featuredGoods: 'api/dashboard/getFeaturedGoods.php',
-        goodsByCategory: (categoryId, offset=0) => `api/dashboard/getGoodsByCategory.php?categoryId=${categoryId}&offset=${offset}&limit=20`,
-        goodsBySupplier: (supplierId) => `api/dashboard/getGoodsBySupplier.php?supplierId=${supplierId}`,
+        featuredGoods: (params = {}) => buildApiUrl('api/dashboard/getFeaturedGoods.php', params),
+        goodsByCategory: (categoryId, params = {}) => buildApiUrl('api/dashboard/getGoodsByCategory.php', { ...params, categoryId }),
+        goodsBySupplier: (supplierId, params = {}) => buildApiUrl('api/dashboard/getGoodsBySupplier.php', { ...params, supplierId }),
         supplierOptions: (goodsId) => `api/dashboard/getSupplierGoodsOptions.php?goodsId=${goodsId}`,
         categories: 'api/dashboard/getCategories.php',
         suppliers: 'api/dashboard/getSuppliers.php',
@@ -688,6 +698,7 @@
     const imagePlaceholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     let lazyImageObserver = null;
     let loadMoreObserver = null;
+    let searchDebounceTimer = null;
 
     const cartOffcanvasEl = document.getElementById('cartOffcanvas');
     const detailOffcanvasEl = document.getElementById('detailOffcanvas');
@@ -756,7 +767,6 @@
         session: null,
         cart: [],
         goods: [],
-        filteredGoods: [],
         categories: [],
         suppliers: [],
         addresses: [],
@@ -764,12 +774,10 @@
         activeSupplier: null,
         loading: false,
         searchQuery: '',
-        visibleCount: 20,
-        preloadComplete: false,
         pagination: {
             limit: 20,
             offsets: { home: 0, category: 0, supplier: 0 },
-            hasMore: { home: true, category: true, supplier: false },
+            hasMore: { home: true, category: true, supplier: true },
             context: 'home',
             contextId: null
         }
@@ -946,101 +954,81 @@
         state.pagination.contextId = contextId;
 
         if(!append) {
-            if(targetContext !== 'supplier') {
-                state.pagination.offsets[targetContext] = 0;
-                state.pagination.hasMore[targetContext] = true;
-            } else {
-                state.pagination.hasMore.supplier = false;
-            }
-            state.visibleCount = state.pagination.limit;
-            state.preloadComplete = false;
-            els.goodsGrid.innerHTML = '<div class="text-center text-muted py-4" style="grid-column:1 / -1;">Loading...</div>';
+            state.pagination.offsets[targetContext] = 0;
+            state.pagination.hasMore[targetContext] = true;
             state.goods = [];
-            state.filteredGoods = [];
+            if(els.goodsGrid) {
+                els.goodsGrid.innerHTML = '<div class="text-center text-muted py-4" style="grid-column:1 / -1;">Loading...</div>';
+            }
+        }
+
+        const offset = append ? (state.pagination.offsets[targetContext] || 0) : 0;
+        const limit = state.pagination.limit;
+        const params = {
+            limit,
+            offset,
+            q: state.searchQuery || undefined
+        };
+
+        let url = '';
+        if(targetContext === 'home') {
+            url = API.featuredGoods({ ...params, homeOnly: 0 });
+        } else if(targetContext === 'category') {
+            url = API.goodsByCategory(contextId, params);
+        } else {
+            url = API.goodsBySupplier(contextId, params);
         }
 
         state.loading = true;
-        let loadSuccessful = false;
-        let offset = state.pagination.offsets[targetContext] || 0;
-        const limit = state.pagination.limit;
-        let aggregate = append ? [...state.goods] : [];
+        updateLoadMoreButton();
 
         try {
-            let keepFetching = true;
-            while(keepFetching) {
-                let url = '';
-                if(targetContext === 'home') {
-                    url = `${API.featuredGoods}?offset=${offset}&limit=${limit}`;
-                } else if(targetContext === 'category') {
-                    url = API.goodsByCategory(id, offset);
-                } else {
-                    url = API.goodsBySupplier(id);
-                }
+            const data = await fetchJson(url);
+            let newGoods = Array.isArray(data?.goods) ? data.goods : [];
 
-                const data = await fetchJson(url);
-                let newGoods = data?.goods || [];
-
-                if(targetContext === 'supplier') {
-                    const supplier = data?.supplier || {};
-                    newGoods = newGoods.map(item => {
-                        const price = Number(item?.discountPrice) > 0 ? Number(item.discountPrice) : Number(item?.price ?? 0);
-                        const offer = {
-                            supplierGoodsId: item.supplierGoodsId,
-                            goodsId: item.goodsId,
-                            price,
-                            minOrder: Number(item.minOrder) || 1,
-                            shopId: supplier.shopId,
-                            shopName: supplier.shopName,
-                            shopType: supplier.shopType,
-                            phone: supplier.phone
-                        };
-                        return {
-                            ...item,
-                            lowestPrice: price,
-                            supplierName: supplier.shopName,
-                            primarySupplier: offer,
-                            supplierOffers: [offer]
-                        };
-                    });
-                    keepFetching = false;
-                }
-
-                if(newGoods.length) {
-                    aggregate = aggregate.concat(newGoods);
-                    offset += targetContext === 'supplier' ? 0 : newGoods.length;
-                    state.goods = aggregate;
-                    applySearchFilter();
-                }
-
-                const fetchedAll = targetContext === 'supplier' || newGoods.length < limit;
-                if(fetchedAll) {
-                    state.pagination.hasMore[targetContext] = false;
-                    keepFetching = false;
-                }
+            if(targetContext === 'supplier') {
+                const supplier = data?.supplier || {};
+                newGoods = newGoods.map(item => {
+                    const price = Number(item?.discountPrice) > 0 ? Number(item.discountPrice) : Number(item?.price ?? 0);
+                    const offer = {
+                        supplierGoodsId: item.supplierGoodsId,
+                        goodsId: item.goodsId,
+                        price,
+                        minOrder: Number(item.minOrder) || 1,
+                        shopId: supplier.shopId,
+                        shopName: supplier.shopName,
+                        shopType: supplier.shopType,
+                        phone: supplier.phone
+                    };
+                    return {
+                        ...item,
+                        lowestPrice: price,
+                        supplierName: supplier.shopName,
+                        primarySupplier: offer,
+                        supplierOffers: [offer]
+                    };
+                });
             }
 
-            if(!aggregate.length) {
-                state.goods = [];
-                state.filteredGoods = [];
-                applySearchFilter();
-            }
+            state.goods = append ? state.goods.concat(newGoods) : newGoods;
+            state.pagination.hasMore[targetContext] = Boolean(data?.hasMore);
 
-            state.pagination.offsets[targetContext] = offset;
-            state.preloadComplete = !state.pagination.hasMore[targetContext];
-            loadSuccessful = true;
+            const nextOffset = Number.isFinite(data?.nextOffset) ? Number(data.nextOffset) : offset + newGoods.length;
+            state.pagination.offsets[targetContext] = Math.max(0, nextOffset);
+
+            renderGoods();
+            return true;
         } catch(error) {
             console.error('Goods load error', error);
-            if(!append) {
+            if(!append && els.goodsGrid) {
                 els.goodsGrid.innerHTML = '<div class="p-3 text-center" style="grid-column:1 / -1;">Failed to load goods.</div>';
-                state.goods = [];
-                state.filteredGoods = [];
             }
             showToast('Load failed', error.message || 'Unable to load goods.', 'danger');
+            return false;
         } finally {
             state.loading = false;
             updateLoadMoreButton();
         }
-        return loadSuccessful;
     }
 
     // --- RENDERING ---
@@ -1101,20 +1089,16 @@
 
     function renderGoods() {
         if(!els.goodsGrid) return;
-        const hasSearch = state.searchQuery.length > 0;
-        const list = hasSearch
-            ? (Array.isArray(state.filteredGoods) ? state.filteredGoods : [])
-            : (Array.isArray(state.goods) ? state.goods : []);
-        const visible = list.slice(0, state.visibleCount);
+        const list = Array.isArray(state.goods) ? state.goods : [];
 
-        if(!visible.length) {
-            const message = hasSearch ? 'No goods match your search.' : 'No goods found';
+        if(!list.length) {
+            const message = state.searchQuery ? 'No goods match your search.' : 'No goods found';
             els.goodsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:2rem;">${message}</div>`;
-            updateLoadMoreButton(list.length);
+            updateLoadMoreButton();
             return;
         }
 
-        els.goodsGrid.innerHTML = visible.map(g => {
+        els.goodsGrid.innerHTML = list.map(g => {
             const price = g.primarySupplier?.price || g.lowestPrice || 0;
             const cartItem = state.cart.find(i => i.goodsId == g.goodsId);
             const qty = cartItem ? cartItem.quantity : 0;
@@ -1152,7 +1136,7 @@
             `;
         }).join('');
 
-        updateLoadMoreButton(list.length);
+        updateLoadMoreButton();
         setupLazyLoading();
     }
 
@@ -1195,21 +1179,6 @@
         }
 
         candidates.forEach(img => lazyImageObserver.observe(img));
-    }
-
-    function applySearchFilter() {
-        if(!state.searchQuery) {
-            state.filteredGoods = [...state.goods];
-        } else {
-            const query = state.searchQuery.toLowerCase();
-            state.filteredGoods = state.goods.filter(goods => {
-                const name = goods.name?.toLowerCase() || '';
-                const category = goods.categoryName?.toLowerCase() || '';
-                const supplier = goods.primarySupplier?.shopName?.toLowerCase() || goods.supplierName?.toLowerCase() || '';
-                return name.includes(query) || category.includes(query) || supplier.includes(query);
-            });
-        }
-        renderGoods();
     }
 
     // --- REGISTER FRIEND ---
@@ -1332,17 +1301,24 @@
     }
 
     function handleSearchInput(event) {
-        state.searchQuery = (event.target.value || '').trim();
-        state.visibleCount = state.pagination.limit;
-        applySearchFilter();
+        const query = (event.target.value || '').trim();
+        if(query === state.searchQuery && !state.loading) return;
+        state.searchQuery = query;
+
+        if(searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+
+        searchDebounceTimer = setTimeout(() => {
+            loadGoods(state.pagination.context, state.pagination.contextId, false).catch(() => {});
+        }, 300);
     }
 
-    function updateLoadMoreButton(totalCount = null) {
+    function updateLoadMoreButton() {
         if(!els.loadMoreBtn) return;
-        const baseCount = totalCount ?? (state.searchQuery ? state.filteredGoods.length : state.goods.length);
-        const hasMoreLocal = state.visibleCount < baseCount;
-        const hasRemote = !!state.pagination.hasMore[state.pagination.context];
-        const shouldShow = baseCount > 0 && (hasMoreLocal || hasRemote);
+        const context = state.pagination.context;
+        const hasRemote = !!state.pagination.hasMore[context];
+        const shouldShow = hasRemote && state.goods.length > 0;
 
         els.loadMoreBtn.classList.toggle('d-none', !shouldShow);
         if(!shouldShow) return;
@@ -1355,15 +1331,6 @@
 
     async function handleLoadMoreGoods() {
         if(state.loading) return;
-        const totalList = state.searchQuery ? state.filteredGoods : state.goods;
-        const hasMoreLocal = state.visibleCount < totalList.length;
-
-        if(hasMoreLocal) {
-            state.visibleCount += state.pagination.limit;
-            renderGoods();
-            return;
-        }
-
         if(!state.pagination.hasMore[state.pagination.context]) {
             showToast('All caught up', 'No more goods available right now.', 'info');
             return;

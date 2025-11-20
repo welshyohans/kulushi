@@ -41,6 +41,9 @@ if ($categoryId <= 0) {
 
 $limit = isset($_GET['limit']) ? max(1, min((int)$_GET['limit'], 50)) : 20;
 $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
+$limitPlusOne = $limit + 1;
+$rawSearch = trim((string)($_GET['q'] ?? $_GET['search'] ?? ''));
+$searchTerm = $rawSearch !== '' ? '%' . $rawSearch . '%' : null;
 
 require_once __DIR__ . '/../../config/Database.php';
 
@@ -51,8 +54,7 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
-    $goodsStmt = $db->prepare(
-        'SELECT
+    $goodsQuery = 'SELECT
             g.id AS goods_id,
             g.name,
             g.description,
@@ -64,21 +66,52 @@ try {
             c.name AS category_name
         FROM goods g
         LEFT JOIN category c ON c.id = g.category_id
-        WHERE g.category_id = :categoryId
-        ORDER BY g.priority DESC, g.id DESC
-        LIMIT :limit OFFSET :offset'
-    );
+        WHERE g.category_id = :categoryId';
+
+    if ($searchTerm !== null) {
+        $goodsQuery .= ' AND (
+            g.name LIKE :searchTerm
+            OR g.description LIKE :searchTerm
+            OR c.name LIKE :searchTerm
+            OR EXISTS (
+                SELECT 1
+                FROM supplier_goods sg2
+                INNER JOIN supplier s2 ON s2.shop_id = sg2.supplier_id
+                WHERE sg2.goods_id = g.id
+                  AND sg2.is_available = 1
+                  AND (
+                    s2.shop_name LIKE :searchTerm
+                    OR s2.shop_type LIKE :searchTerm
+                  )
+            )
+        )';
+    }
+
+    $goodsQuery .= ' ORDER BY g.priority DESC, g.id DESC
+        LIMIT :limitPlusOne OFFSET :offset';
+
+    $goodsStmt = $db->prepare($goodsQuery);
     $goodsStmt->bindValue(':categoryId', $categoryId, PDO::PARAM_INT);
-    $goodsStmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    if ($searchTerm !== null) {
+        $goodsStmt->bindValue(':searchTerm', $searchTerm, PDO::PARAM_STR);
+    }
+    $goodsStmt->bindValue(':limitPlusOne', $limitPlusOne, PDO::PARAM_INT);
     $goodsStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $goodsStmt->execute();
 
     $goodsRows = $goodsStmt->fetchAll();
+    $hasMore = count($goodsRows) > $limit;
+    if ($hasMore) {
+        $goodsRows = array_slice($goodsRows, 0, $limit);
+    }
+
     if (!$goodsRows) {
         echo json_encode([
             'success' => true,
             'goods' => [],
-            'count' => 0
+            'count' => 0,
+            'hasMore' => false,
+            'nextOffset' => $offset
         ]);
         exit;
     }
@@ -106,7 +139,7 @@ try {
         INNER JOIN supplier s ON s.shop_id = sg.supplier_id
         WHERE sg.is_available = 1
           AND sg.goods_id IN ($placeholders)
-        ORDER BY sg.goods_id ASC, sg.min_order ASC, sg.price ASC"
+        ORDER BY sg.goods_id ASC, sg.price ASC, sg.min_order ASC"
     );
     $offersStmt->execute($goodsIds);
     $offers = $offersStmt->fetchAll();
@@ -166,7 +199,9 @@ try {
     echo json_encode([
         'success' => true,
         'goods' => $responseGoods,
-        'count' => count($responseGoods)
+        'count' => count($responseGoods),
+        'hasMore' => $hasMore,
+        'nextOffset' => $offset + count($responseGoods)
     ]);
 } catch (PDOException $exception) {
     http_response_code(500);

@@ -39,6 +39,12 @@ if ($supplierId <= 0) {
     exit;
 }
 
+$limit = isset($_GET['limit']) ? max(1, min((int)$_GET['limit'], 50)) : 20;
+$offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;
+$limitPlusOne = $limit + 1;
+$rawSearch = trim((string)($_GET['q'] ?? $_GET['search'] ?? ''));
+$searchTerm = $rawSearch !== '' ? '%' . $rawSearch . '%' : null;
+
 require_once __DIR__ . '/../../config/Database.php';
 
 try {
@@ -61,8 +67,7 @@ try {
         exit;
     }
 
-    $goodsStmt = $db->prepare(
-        'SELECT
+    $goodsQuery = 'SELECT
             sg.id AS supplier_goods_id,
             sg.goods_id,
             sg.price,
@@ -81,11 +86,33 @@ try {
         FROM supplier_goods sg
         INNER JOIN goods g ON g.id = sg.goods_id
         LEFT JOIN category c ON c.id = g.category_id
-        WHERE sg.supplier_id = :supplierId AND sg.is_available = 1
-        ORDER BY g.priority DESC, sg.min_order ASC, sg.price ASC'
-    );
-    $goodsStmt->execute([':supplierId' => $supplierId]);
+        WHERE sg.supplier_id = :supplierId AND sg.is_available = 1';
+
+    if ($searchTerm !== null) {
+        $goodsQuery .= ' AND (
+            g.name LIKE :searchTerm
+            OR g.description LIKE :searchTerm
+            OR c.name LIKE :searchTerm
+        )';
+    }
+
+    $goodsQuery .= ' ORDER BY g.priority DESC, sg.price ASC, sg.min_order ASC
+        LIMIT :limitPlusOne OFFSET :offset';
+
+    $goodsStmt = $db->prepare($goodsQuery);
+    $goodsStmt->bindValue(':supplierId', $supplierId, PDO::PARAM_INT);
+    if ($searchTerm !== null) {
+        $goodsStmt->bindValue(':searchTerm', $searchTerm, PDO::PARAM_STR);
+    }
+    $goodsStmt->bindValue(':limitPlusOne', $limitPlusOne, PDO::PARAM_INT);
+    $goodsStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $goodsStmt->execute();
     $rows = $goodsStmt->fetchAll();
+
+    $hasMore = count($rows) > $limit;
+    if ($hasMore) {
+        $rows = array_slice($rows, 0, $limit);
+    }
 
     $goods = [];
     foreach ($rows as $row) {
@@ -117,7 +144,9 @@ try {
             'phone' => $supplier['phone'] ?? ''
         ],
         'goods' => $goods,
-        'count' => count($goods)
+        'count' => count($goods),
+        'hasMore' => $hasMore,
+        'nextOffset' => $offset + count($goods)
     ]);
 } catch (PDOException $exception) {
     http_response_code(500);
