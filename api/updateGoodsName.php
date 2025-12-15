@@ -120,6 +120,18 @@ if ($hasPriority) {
     }
 }
 
+$hasCommission = array_key_exists('commission', $data);
+$commissionValue = null;
+if ($hasCommission) {
+    $commissionValue = filter_var($data['commission'], FILTER_VALIDATE_FLOAT);
+    if ($commissionValue === false) {
+        $respond(422, [
+            'success' => false,
+            'message' => 'commission must be a numeric value.'
+        ]);
+    }
+}
+
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../model/Settings.php';
 require_once __DIR__ . '/../model/SupplierGoods.php';
@@ -131,8 +143,8 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
-    // include description, tiktok_url and priority in selected fields
-    $goodsStmt = $db->prepare('SELECT id, name, description, last_update_code, tiktok_url, priority FROM goods WHERE id = :id LIMIT 1');
+    // include description, tiktok_url, priority and commission in selected fields
+    $goodsStmt = $db->prepare('SELECT id, name, description, last_update_code, tiktok_url, priority, commission FROM goods WHERE id = :id LIMIT 1');
     $goodsStmt->execute([':id' => $goodsId]);
     $goodsRow = $goodsStmt->fetch();
 
@@ -147,6 +159,7 @@ try {
     $previousDescription = array_key_exists('description', $goodsRow) ? $goodsRow['description'] : null;
     $previousTikTokUrl = array_key_exists('tiktok_url', $goodsRow) ? $goodsRow['tiktok_url'] : null;
     $previousPriority = array_key_exists('priority', $goodsRow) ? (int)$goodsRow['priority'] : null;
+    $previousCommission = array_key_exists('commission', $goodsRow) ? (float)$goodsRow['commission'] : null;
 
     $settings = new Settings($db);
     $sgModel = new SupplierGoods($db);
@@ -163,7 +176,7 @@ try {
 
     $newCode = (int)$settings->nextCode();
 
-    // Build update SQL conditionally to avoid touching description when not provided
+    // Build update SQL conditionally to avoid touching fields when not provided
     $updateSql = 'UPDATE goods
          SET name = :name,
              last_update_code = :code,
@@ -176,6 +189,9 @@ try {
     }
     if ($shouldUpdatePriority) {
         $updateSql .= ",\n             priority = :priority";
+    }
+    if ($hasCommission) {
+        $updateSql .= ",\n             commission = :commission";
     }
     $updateSql .= "\n         WHERE id = :id";
 
@@ -194,6 +210,9 @@ try {
     }
     if ($shouldUpdatePriority) {
         $params[':priority'] = $priorityValue;
+    }
+    if ($hasCommission) {
+        $params[':commission'] = $commissionValue;
     }
 
     $updateStmt->execute($params);
@@ -218,6 +237,8 @@ try {
         'newTikTokUrl' => $shouldUpdateTikTokUrl ? $tiktokUrl : $previousTikTokUrl,
         'previousPriority' => $previousPriority,
         'newPriority' => $shouldUpdatePriority ? $priorityValue : $previousPriority,
+        'previousCommission' => $previousCommission,
+        'newCommission' => $hasCommission ? $commissionValue : $previousCommission,
         'lastUpdateCode' => $newCode,
         'last_update_code' => $newCode,
         'applied_last_update_code' => $newCode
