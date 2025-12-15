@@ -38,7 +38,7 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
     $stmt = $db->prepare(
-        'SELECT id, name FROM customer ORDER BY name ASC, id ASC'
+        'SELECT id, name,phone FROM customer ORDER BY name ASC, id ASC'
     );
     $stmt->execute();
     $rawCustomers = $stmt->fetchAll();
@@ -47,7 +47,8 @@ try {
     foreach ($rawCustomers as $entry) {
         $customers[] = [
             'customerId' => (int)$entry['id'],
-            'customerName' => (string)$entry['name']
+            'customerName' => (string)$entry['name'],
+            'phone' => (string)$entry['phone']
         ];
     }
 
