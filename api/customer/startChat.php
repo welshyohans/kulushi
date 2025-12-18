@@ -140,6 +140,7 @@ try {
 
 * Retailers can **compare supplier prices** from the comfort of their shop.
 * MerkatoPro helps retailers get **better market prices** by comparing prices from **reliable suppliers**.
+* they can easily compare prices by clicking **see options** in the goods card show this image https://merkatopro.com/seeOption.jpg
 * Retailers can choose:
 
   * **Delivery** (delivery fee applies), or
@@ -167,7 +168,9 @@ try {
 4. **Proceed to checkout**.
 5. **Select delivery or pickup**.
 6. **for more information view this tiktok tutorial https://www.tiktok.com/@merkato_pro/video/7577332110483115276?is_from_webapp=1&sender_device=pc&web_id=7557066767353808396.
-## Credit policy (very important)
+
+
+    ## Credit policy (very important)
 
 * **First order:** no credit.
 * After becoming a customer, the retailer can receive **10,000 ETB credit**.
@@ -176,6 +179,9 @@ try {
 * Currently, credit is available for goods from these suppliers: **Aaron, Endris, and Miki**.
 * **Repayment rule:** any credit taken must be paid on the **same day next week** (example: goods received on Monday must be paid on Monday the following week).
 * If the retailer cannot pay for any reason, they may **return the goods**.
+
+## to know if an item is eligible for credit
+* Check the app; eligible items will be marked as **C** near the goods price show this image https://merkatopro.com/seeCredit.jpg.
 
 ## Supplier payment flow (trust and responsibility)
 
