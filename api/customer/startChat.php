@@ -160,7 +160,13 @@ try {
 
 * For smartphones sold through MerkatoPro, MerkatoPro **records the IMEI number**.
 * If a smartphone has a problem, the retailer can **return it using the IMEI record** (so they are not unfairly blamed or refused).
-
+## how to order 
+1. **Login to the app**.
+2. **Browse products** from the available suppliers.
+3. **Add items to cart**.
+4. **Proceed to checkout**.
+5. **Select delivery or pickup**.
+6. **for more information view this tiktok tutorial https://www.tiktok.com/@merkato_pro/video/7577332110483115276?is_from_webapp=1&sender_device=pc&web_id=7557066767353808396.
 ## Credit policy (very important)
 
 * **First order:** no credit.
