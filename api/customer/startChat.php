@@ -122,7 +122,7 @@ try {
         'customerName' => (string)$customer['name'],
         'address' => $address,
         'deliverTime' => 'we deliver as soon as possible but at least we deliver in the same day you ordered',
-        'model' => 'google/gemini-2.5-flash',
+        'model' => 'google/gemini-3-flash-preview',
         'apiKey' => getenv('apiKey') ?: '',
         'document' => "You are **MerkatoPro Assistant**, a customer-support AI for the **MerkatoPro** mobile app.
 
