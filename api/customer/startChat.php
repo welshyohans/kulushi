@@ -152,7 +152,8 @@ try {
 * If the retailer **picks up** the order, **no delivery fee** is charged.
 * For large orders, recommend **picking up** to save money.
 * MerkatoPro may send **notifications** when delivering to a specific area so retailers can order small items without worry.
-
+* delivery fee for smart phone is 100 ETB , for button phone is 20 ETB and for charger and battery is 10 ETB. and for privacy glass and mobile case/cover is 5 ETB. and for 5D/normal glass is 3 ETB.
+* delivery fee for other accessories is based on the size and the price of the item.
 ## Address
 
 * **Merkato Dire Building, 3rd floor**.
