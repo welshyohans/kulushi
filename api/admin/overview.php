@@ -43,6 +43,33 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+    // Helper function to check if a table exists
+    $tableExists = function(PDO $db, string $tableName): bool {
+        try {
+            $stmt = $db->query("SHOW TABLES LIKE '$tableName'");
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    };
+
+    // Helper function to check if a column exists in a table
+    $columnExists = function(PDO $db, string $tableName, string $columnName): bool {
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM `$tableName` LIKE '$columnName'");
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    };
+
+    // Check if migration tables/columns exist
+    $hasSupplierPrice = $columnExists($db, 'ordered_list', 'supplier_price');
+    $hasDailyExpenses = $tableExists($db, 'daily_expenses');
+    $hasIsLead = $columnExists($db, 'customer', 'is_lead');
+    $hasManualCredit = $columnExists($db, 'customer', 'manual_credit');
+
+    // Orders revenue and profit
     $ordersStmt = $db->prepare(
         'SELECT
             COALESCE(SUM(CASE WHEN deliver_status != 7 THEN total_price ELSE 0 END), 0) AS revenue,
@@ -53,35 +80,55 @@ try {
     $ordersStmt->execute([':start' => $start, ':end' => $end]);
     $ordersRow = $ordersStmt->fetch() ?: ['revenue' => 0, 'profit' => 0];
 
-    $supplierStmt = $db->prepare(
-        'SELECT
-            COALESCE(SUM(COALESCE(ol.supplier_price, 0) * COALESCE(ol.quantity, 0)), 0) AS supplier_cost
-         FROM ordered_list ol
-         INNER JOIN orders o ON o.id = ol.orders_id
-         WHERE o.order_time BETWEEN :start AND :end
-           AND o.deliver_status IN (4,5,6)
-           AND ol.status != -1'
-    );
-    $supplierStmt->execute([':start' => $start, ':end' => $end]);
-    $supplierRow = $supplierStmt->fetch() ?: ['supplier_cost' => 0];
+    // Supplier cost - only if supplier_price column exists
+    $supplierCost = 0;
+    if ($hasSupplierPrice) {
+        $supplierStmt = $db->prepare(
+            'SELECT
+                COALESCE(SUM(COALESCE(ol.supplier_price, 0) * COALESCE(ol.quantity, 0)), 0) AS supplier_cost
+             FROM ordered_list ol
+             INNER JOIN orders o ON o.id = ol.orders_id
+             WHERE o.order_time BETWEEN :start AND :end
+               AND o.deliver_status IN (4,5,6)
+               AND ol.status != -1'
+        );
+        $supplierStmt->execute([':start' => $start, ':end' => $end]);
+        $supplierRow = $supplierStmt->fetch();
+        $supplierCost = $supplierRow ? (float)$supplierRow['supplier_cost'] : 0;
+    }
 
-    $expenseStmt = $db->prepare(
-        'SELECT COALESCE(SUM(amount), 0) AS expenses
-         FROM daily_expenses
-         WHERE expense_date = :date'
-    );
-    $expenseStmt->execute([':date' => $date->format('Y-m-d')]);
-    $expenseRow = $expenseStmt->fetch() ?: ['expenses' => 0];
+    // Daily expenses - only if table exists
+    $dailyExpenses = 0;
+    if ($hasDailyExpenses) {
+        $expenseStmt = $db->prepare(
+            'SELECT COALESCE(SUM(amount), 0) AS expenses
+             FROM daily_expenses
+             WHERE expense_date = :date'
+        );
+        $expenseStmt->execute([':date' => $date->format('Y-m-d')]);
+        $expenseRow = $expenseStmt->fetch();
+        $dailyExpenses = $expenseRow ? (float)$expenseRow['expenses'] : 0;
+    }
 
-    $newCustomersStmt = $db->prepare(
-        'SELECT COUNT(*) AS total
-         FROM customer
-         WHERE DATE(register_at) = :date
-           AND COALESCE(is_lead, 0) = 0'
-    );
+    // New customers - handle is_lead column conditionally
+    if ($hasIsLead) {
+        $newCustomersStmt = $db->prepare(
+            'SELECT COUNT(*) AS total
+             FROM customer
+             WHERE DATE(register_at) = :date
+               AND COALESCE(is_lead, 0) = 0'
+        );
+    } else {
+        $newCustomersStmt = $db->prepare(
+            'SELECT COUNT(*) AS total
+             FROM customer
+             WHERE DATE(register_at) = :date'
+        );
+    }
     $newCustomersStmt->execute([':date' => $date->format('Y-m-d')]);
     $newCustomersRow = $newCustomersStmt->fetch() ?: ['total' => 0];
 
+    // New customers who ordered
     $newOrdersStmt = $db->prepare(
         'SELECT COUNT(DISTINCT o.customer_id) AS total
          FROM orders o
@@ -93,14 +140,34 @@ try {
     $newOrdersStmt->execute([':date' => $date->format('Y-m-d')]);
     $newOrdersRow = $newOrdersStmt->fetch() ?: ['total' => 0];
 
-    $creditStmt = $db->prepare(
-        'SELECT COALESCE(SUM(COALESCE(total_credit, 0) + COALESCE(manual_credit, 0)), 0) AS total_credit
-         FROM customer
-         WHERE COALESCE(is_lead, 0) = 0'
-    );
+    // Total credit - handle manual_credit and is_lead columns conditionally
+    if ($hasManualCredit && $hasIsLead) {
+        $creditStmt = $db->prepare(
+            'SELECT COALESCE(SUM(COALESCE(total_credit, 0) + COALESCE(manual_credit, 0)), 0) AS total_credit
+             FROM customer
+             WHERE COALESCE(is_lead, 0) = 0'
+        );
+    } elseif ($hasManualCredit) {
+        $creditStmt = $db->prepare(
+            'SELECT COALESCE(SUM(COALESCE(total_credit, 0) + COALESCE(manual_credit, 0)), 0) AS total_credit
+             FROM customer'
+        );
+    } elseif ($hasIsLead) {
+        $creditStmt = $db->prepare(
+            'SELECT COALESCE(SUM(COALESCE(total_credit, 0)), 0) AS total_credit
+             FROM customer
+             WHERE COALESCE(is_lead, 0) = 0'
+        );
+    } else {
+        $creditStmt = $db->prepare(
+            'SELECT COALESCE(SUM(COALESCE(total_credit, 0)), 0) AS total_credit
+             FROM customer'
+        );
+    }
     $creditStmt->execute();
     $creditRow = $creditStmt->fetch() ?: ['total_credit' => 0];
 
+    // Trend data
     $trendEnd = clone $date;
     $trendStart = (clone $date)->modify('-' . ($days - 1) . ' days');
 
@@ -119,17 +186,21 @@ try {
     ]);
     $orderTrendRows = $trendOrdersStmt->fetchAll();
 
-    $trendExpensesStmt = $db->prepare(
-        'SELECT expense_date AS day, COALESCE(SUM(amount), 0) AS expenses
-         FROM daily_expenses
-         WHERE expense_date BETWEEN :start AND :end
-         GROUP BY expense_date'
-    );
-    $trendExpensesStmt->execute([
-        ':start' => $trendStart->format('Y-m-d'),
-        ':end' => $trendEnd->format('Y-m-d')
-    ]);
-    $expenseTrendRows = $trendExpensesStmt->fetchAll();
+    // Expense trend - only if table exists
+    $expenseTrendRows = [];
+    if ($hasDailyExpenses) {
+        $trendExpensesStmt = $db->prepare(
+            'SELECT expense_date AS day, COALESCE(SUM(amount), 0) AS expenses
+             FROM daily_expenses
+             WHERE expense_date BETWEEN :start AND :end
+             GROUP BY expense_date'
+        );
+        $trendExpensesStmt->execute([
+            ':start' => $trendStart->format('Y-m-d'),
+            ':end' => $trendEnd->format('Y-m-d')
+        ]);
+        $expenseTrendRows = $trendExpensesStmt->fetchAll();
+    }
 
     $trendMap = [];
     foreach ($orderTrendRows as $row) {
@@ -168,13 +239,19 @@ try {
         'metrics' => [
             'dailyProfit' => (float)$ordersRow['profit'],
             'dailyRevenue' => (float)$ordersRow['revenue'],
-            'dailyExpenses' => (float)$expenseRow['expenses'],
-            'dailySupplierCost' => (float)$supplierRow['supplier_cost'],
+            'dailyExpenses' => $dailyExpenses,
+            'dailySupplierCost' => $supplierCost,
             'newCustomersRegistered' => (int)$newCustomersRow['total'],
             'newCustomersOrdered' => (int)$newOrdersRow['total'],
             'totalCredit' => (float)$creditRow['total_credit']
         ],
-        'trends' => $trend
+        'trends' => $trend,
+        'schema_status' => [
+            'has_supplier_price' => $hasSupplierPrice,
+            'has_daily_expenses' => $hasDailyExpenses,
+            'has_is_lead' => $hasIsLead,
+            'has_manual_credit' => $hasManualCredit
+        ]
     ]);
 } catch (PDOException $exception) {
     $respond(500, [
