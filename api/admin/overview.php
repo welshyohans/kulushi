@@ -201,11 +201,15 @@ try {
             'SELECT COUNT(DISTINCT o.customer_id) AS total
              FROM orders o
              INNER JOIN customer c ON c.id = o.customer_id
-             WHERE DATE(o.order_time) = :date
-               AND DATE(c.register_at) = :date
+             WHERE DATE(o.order_time) = :order_date
+               AND DATE(c.register_at) = :register_date
                AND o.deliver_status != 7'
         );
-        $newOrdersStmt->execute([':date' => $date->format('Y-m-d')]);
+        $dateValue = $date->format('Y-m-d');
+        $newOrdersStmt->execute([
+            ':order_date' => $dateValue,
+            ':register_date' => $dateValue
+        ]);
         $newOrdersRow = $newOrdersStmt->fetch() ?: ['total' => 0];
     }
 
