@@ -50,13 +50,15 @@ $order->credit_amount = $data->creditAmount;
 $order->deliver_status = property_exists($data, 'deliverStatus') ? $data->deliverStatus : 0;
 $order->comment = property_exists($data, 'comment') ? (string) $data->comment : '';
 
-// Calculate profit from items
-$totalProfit = 0;
-foreach ($data->items as $item) {
-    // Profit calculation can be done here if needed
-    // For now, we'll set it to 0 or calculate based on business logic
-}
-$order->profit = $totalProfit;
+// Calculate profit from items (commission per goods)
+$totalProfit = 0.0;
+$pricingStmt = $conn->prepare(
+    'SELECT sg.price AS supplier_price, g.commission AS goods_commission
+     FROM supplier_goods sg
+     INNER JOIN goods g ON g.id = sg.goods_id
+     WHERE sg.id = :supplierGoodsId
+     LIMIT 1'
+);
 
 try {
     $conn->beginTransaction();
@@ -77,18 +79,38 @@ try {
                 respond(400, 'error', "Missing item field: {$itemField}");
             }
         }
+        $supplierGoodsId = (int)$item->supplierGoodsId;
+        $quantity = (int)$item->quantity;
+        $pricingStmt->execute([':supplierGoodsId' => $supplierGoodsId]);
+        $pricing = $pricingStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $supplierPrice = isset($pricing['supplier_price']) ? (float)$pricing['supplier_price'] : 0.0;
+        $commission = isset($pricing['goods_commission']) ? (float)$pricing['goods_commission'] : 0.0;
+        $lineProfit = $commission * $quantity;
+
         $ordered_list->orders_id = $order_id;
-        $ordered_list->supplier_goods_id = $item->supplierGoodsId;
+        $ordered_list->supplier_goods_id = $supplierGoodsId;
         $ordered_list->goods_id = $item->goodsId;
-        $ordered_list->quantity = $item->quantity;
+        $ordered_list->quantity = $quantity;
         $ordered_list->each_price = $item->unitPrice;
+        $ordered_list->supplier_price = $supplierPrice;
+        $ordered_list->commission = $commission;
+        $ordered_list->line_profit = $lineProfit;
         $ordered_list->eligible_for_credit = $item->eligibleForCredit ? 1 : 0;
         $ordered_list->status = 0; // Default status
         if (!$ordered_list->create()) {
             $conn->rollBack();
             respond(500, 'error', 'Error creating ordered list');
         }
+
+        $totalProfit += $lineProfit;
     }
+
+    $order->profit = $totalProfit;
+    $profitStmt = $conn->prepare('UPDATE orders SET profit = :profit WHERE id = :orderId');
+    $profitStmt->execute([
+        ':profit' => number_format($totalProfit, 2, '.', ''),
+        ':orderId' => $order_id
+    ]);
 
     $conn->commit();
 

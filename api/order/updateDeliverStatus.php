@@ -255,6 +255,18 @@ function adjustOrderListPrices(PDO $db, int $orderId, int $direction): int
          SET ol.each_price = GREATEST(
                 0,
                 ROUND(COALESCE(ol.each_price, 0) + (:direction * COALESCE(g.commission, 0)), 2)
+             ),
+             ol.commission = GREATEST(
+                0,
+                ROUND(COALESCE(ol.commission, 0) + (:direction * COALESCE(g.commission, 0)), 2)
+             ),
+             ol.line_profit = GREATEST(
+                0,
+                ROUND(
+                    GREATEST(0, COALESCE(ol.commission, 0) + (:direction * COALESCE(g.commission, 0)))
+                    * COALESCE(ol.quantity, 0),
+                    2
+                )
              )
          WHERE ol.orders_id = :orderId
            AND ol.goods_id IS NOT NULL
@@ -312,12 +324,14 @@ function updateOrderFinancials(PDO $db, int $orderId, array $financials, int $de
     $totalPrice = formatMoney($financials['total'] ?? 0.0);
     $cashAmount = formatMoney($financials['cash'] ?? 0.0);
     $creditAmount = formatMoney($financials['credit'] ?? 0.0);
+    $profitAmount = formatMoney(recalcOrderProfit($db, $orderId));
 
     if ($unpaidOverride !== null) {
         $unpaidCash = formatMoney($unpaidOverride['cash'] ?? $financials['cash'] ?? 0.0);
         $unpaidCredit = formatMoney($unpaidOverride['credit'] ?? $financials['credit'] ?? 0.0);
         $sql = 'UPDATE orders
                 SET total_price = :totalPrice,
+                    profit = :profitAmount,
                     cash_amount = :cashAmount,
                     credit_amount = :creditAmount,
                     unpaid_cash = :unpaidCash,
@@ -326,6 +340,7 @@ function updateOrderFinancials(PDO $db, int $orderId, array $financials, int $de
                 WHERE id = :orderId';
         $params = [
             ':totalPrice' => $totalPrice,
+            ':profitAmount' => $profitAmount,
             ':cashAmount' => $cashAmount,
             ':creditAmount' => $creditAmount,
             ':unpaidCash' => $unpaidCash,
@@ -336,12 +351,14 @@ function updateOrderFinancials(PDO $db, int $orderId, array $financials, int $de
     } else {
         $sql = 'UPDATE orders
                 SET total_price = :totalPrice,
+                    profit = :profitAmount,
                     cash_amount = :cashAmount,
                     credit_amount = :creditAmount,
                     deliver_status = :deliverStatus
                 WHERE id = :orderId';
         $params = [
             ':totalPrice' => $totalPrice,
+            ':profitAmount' => $profitAmount,
             ':cashAmount' => $cashAmount,
             ':creditAmount' => $creditAmount,
             ':deliverStatus' => $deliverStatus,
@@ -356,4 +373,18 @@ function updateOrderFinancials(PDO $db, int $orderId, array $financials, int $de
 function formatMoney(float $value): string
 {
     return number_format($value, 2, '.', '');
+}
+
+function recalcOrderProfit(PDO $db, int $orderId): float
+{
+    $stmt = $db->prepare(
+        'SELECT COALESCE(SUM(COALESCE(line_profit, 0)), 0) AS profit
+         FROM ordered_list
+         WHERE orders_id = :orderId
+           AND status != -1'
+    );
+    $stmt->execute([':orderId' => $orderId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['profit' => 0];
+
+    return isset($row['profit']) ? (float)$row['profit'] : 0.0;
 }

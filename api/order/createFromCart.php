@@ -108,6 +108,7 @@ try {
 
     $preparedItems = [];
     $totalPrice = 0.0;
+    $totalProfit = 0.0;
     $totalQuantity = 0;
 
     $offerStmt = $db->prepare(
@@ -168,7 +169,9 @@ try {
         $unitPrice = $unitBasePrice + $commission;
 
         $lineTotal = $unitPrice * $quantity;
+        $lineProfit = $commission * $quantity;
         $totalPrice += $lineTotal;
+        $totalProfit += $lineProfit;
         $totalQuantity += $quantity;
 
         $preparedItems[] = [
@@ -178,6 +181,9 @@ try {
             'goods_name' => $offer['goods_name'],
             'min_order' => $minOrder,
             'unit_price' => $unitPrice,
+            'supplier_price' => (float)$offer['price'],
+            'commission' => $commission,
+            'line_profit' => $lineProfit,
             'quantity' => $quantity,
             'line_total' => $lineTotal
         ];
@@ -185,20 +191,21 @@ try {
 
     $orderStmt = $db->prepare(
         'INSERT INTO orders (customer_id, total_price, profit, unpaid_cash, unpaid_credit, cash_amount, credit_amount, deliver_status, comment)
-         VALUES (:customer_id, :total_price, 0, 0, 0, :cash_amount, 0, 1, :comment)'
+         VALUES (:customer_id, :total_price, :profit, 0, 0, :cash_amount, 0, 1, :comment)'
     );
     $comment = sprintf('Auto order via web — items: %d, quantity: %d', count($preparedItems), $totalQuantity);
     $orderStmt->execute([
         ':customer_id' => $customerId,
         ':total_price' => $totalPrice,
+        ':profit' => number_format($totalProfit, 2, '.', ''),
         ':cash_amount' => $totalPrice,
         ':comment' => $comment
     ]);
     $orderId = (int)$db->lastInsertId();
 
     $orderListStmt = $db->prepare(
-        'INSERT INTO ordered_list (orders_id, supplier_goods_id, goods_id, quantity, each_price, eligible_for_credit, status)
-         VALUES (:orders_id, :supplier_goods_id, :goods_id, :quantity, :each_price, :eligible_for_credit, 1)'
+        'INSERT INTO ordered_list (orders_id, supplier_goods_id, goods_id, quantity, each_price, supplier_price, commission, line_profit, eligible_for_credit, status)
+         VALUES (:orders_id, :supplier_goods_id, :goods_id, :quantity, :each_price, :supplier_price, :commission, :line_profit, :eligible_for_credit, 1)'
     );
 
     foreach ($preparedItems as $prepared) {
@@ -208,6 +215,9 @@ try {
             ':goods_id' => $prepared['goods_id'],
             ':quantity' => $prepared['quantity'],
             ':each_price' => $prepared['unit_price'],
+            ':supplier_price' => $prepared['supplier_price'],
+            ':commission' => $prepared['commission'],
+            ':line_profit' => $prepared['line_profit'],
             ':eligible_for_credit' => 0
         ]);
     }

@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MerkatoPro Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f7f0e6;
+            --bg-accent: #e6f0e4;
+            --ink: #1b2b24;
+            --muted: #5f6b63;
+            --card: #fff8ee;
+            --card-2: #f3efe6;
+            --accent: #f4a261;
+            --accent-2: #2a9d8f;
+            --accent-3: #264653;
+            --shadow: 0 24px 50px -40px rgba(22, 38, 30, 0.55);
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Space Grotesk", sans-serif;
+            color: var(--ink);
+            background: radial-gradient(circle at top left, rgba(244, 162, 97, 0.22), transparent 50%),
+                        radial-gradient(circle at 20% 20%, rgba(42, 157, 143, 0.18), transparent 55%),
+                        linear-gradient(180deg, var(--bg) 0%, var(--bg-accent) 100%);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(rgba(38, 70, 83, 0.08) 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.45;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            padding: 32px 24px 64px;
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .brand h1 {
+            font-family: "Fraunces", serif;
+            font-weight: 700;
+            font-size: clamp(1.8rem, 3vw, 2.6rem);
+            margin: 0;
+        }
+
+        .brand p {
+            margin: 6px 0 0;
+            color: var(--muted);
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(42, 157, 143, 0.18);
+            color: var(--accent-3);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: none;
+            padding: 10px 16px;
+            border-radius: 999px;
+            background: var(--accent-3);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px -20px rgba(38, 70, 83, 0.7);
+        }
+
+        .btn.secondary {
+            background: var(--accent);
+            color: #2b1e12;
+        }
+
+        .date-picker {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: var(--shadow);
+        }
+
+        .date-picker input {
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--accent-3);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--card);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .panel h2 {
+            font-family: "Fraunces", serif;
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        .panel p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .overview {
+            grid-column: span 12;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: #fffdf7;
+            border-radius: var(--radius-md);
+            padding: 16px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid rgba(38, 70, 83, 0.08);
+            animation: slideUp 0.6s ease both;
+        }
+
+        .stat-card span {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .stat-card strong {
+            font-size: 1.45rem;
+        }
+
+        .trend {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 16px;
+        }
+
+        .chart-shell {
+            background: #fffdf7;
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 180px;
+        }
+
+        .panel.split {
+            grid-column: span 6;
+        }
+
+        .panel.third {
+            grid-column: span 4;
+        }
+
+        .panel.half {
+            grid-column: span 6;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(38, 70, 83, 0.08);
+            text-align: left;
+        }
+
+        .table th {
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .table tbody tr:hover {
+            background: rgba(42, 157, 143, 0.08);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .form-grid input,
+        .form-grid select,
+        .form-grid textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(38, 70, 83, 0.15);
+            font-family: inherit;
+        }
+
+        .form-grid textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            display: inline-flex;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(42, 157, 143, 0.15);
+            color: var(--accent-3);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 960px) {
+            .panel.split,
+            .panel.third,
+            .panel.half {
+                grid-column: span 12;
+            }
+
+            .trend {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="brand">
+            <div class="pill">MerkatoPro Admin</div>
+            <h1>Growth & Operations Control Room</h1>
+            <p>Ethiopian time: <span id="localTime">--:--</span></p>
+        </div>
+        <div class="header-actions">
+            <div class="date-picker">
+                <label for="dashboardDate">Date</label>
+                <input type="date" id="dashboardDate">
+            </div>
+            <button class="btn" id="refreshBtn">Refresh Data</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel overview fade-in">
+            <div>
+                <h2>Today at a glance</h2>
+                <p>Profit, revenue, expenses, and new customer movement.</p>
+            </div>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card"><span>Daily Profit</span><strong id="dailyProfit">ETB 0</strong></div>
+                <div class="stat-card"><span>Daily Revenue</span><strong id="dailyRevenue">ETB 0</strong></div>
+                <div class="stat-card"><span>Daily Expenses</span><strong id="dailyExpenses">ETB 0</strong></div>
+                <div class="stat-card"><span>Supplier Cost</span><strong id="dailySupplierCost">ETB 0</strong></div>
+                <div class="stat-card"><span>New Customers</span><strong id="newCustomers">0</strong></div>
+                <div class="stat-card"><span>New Customers Ordered</span><strong id="newCustomersOrdered">0</strong></div>
+                <div class="stat-card"><span>Total Credit</span><strong id="totalCredit">ETB 0</strong></div>
+            </div>
+            <div class="trend">
+                <div class="chart-shell">
+                    <h3>7-day trend</h3>
+                    <canvas id="trendChart" width="600" height="240"></canvas>
+                </div>
+                <div>
+                    <h3>Focus</h3>
+                    <p>Smartphone category is priority. Use promos to highlight the best price comparisons.</p>
+                    <div class="tag">Category 4: Smart phone</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel split fade-in">
+            <h2>Daily expenses</h2>
+            <p>Record delivery, staff, and operational costs.</p>
+            <form id="expenseForm">
+                <div class="form-grid">
+                    <input type="date" id="expenseDate">
+                    <input type="number" id="expenseAmount" placeholder="Amount (ETB)" min="0" step="0.01">
+                    <input type="text" id="expenseReason" placeholder="Reason">
+                </div>
+                <div class="form-actions">
+                    <button class="btn secondary" type="submit">Add expense</button>
+                </div>
+            </form>
+            <table class="table" id="expenseTable">
+                <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Reason</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <section class="panel split fade-in">
+            <h2>Customers & adjustments</h2>
+            <p>Segment and edit manual profit/loss/credit.</p>
+            <div class="form-grid">
+                <input type="search" id="customerSearch" placeholder="Search name, phone, shop">
+                <select id="segmentFilter">
+                    <option value="">All segments</option>
+                    <option value="new">new</option>
+                    <option value="active">active</option>
+                    <option value="loyal">loyal</option>
+                    <option value="vip">vip</option>
+                    <option value="at_risk">at_risk</option>
+                    <option value="churned">churned</option>
+                    <option value="potential">potential</option>
+                </select>
+            </div>
+            <table class="table" id="customerTable">
+                <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Segment</th>
+                    <th>Manual Profit</th>
+                    <th>Manual Loss</th>
+                    <th>Manual Credit</th>
+                    <th>Save</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <section class="panel third fade-in">
+            <h2>Potential leads</h2>
+            <p>Capture leads from TikTok, Telegram, Google Map.</p>
+            <form id="leadForm">
+                <div class="form-grid">
+                    <input type="text" id="leadName" placeholder="Name">
+                    <input type="text" id="leadPhone" placeholder="Phone">
+                    <input type="text" id="leadSource" placeholder="Source">
+                </div>
+                <div class="form-actions">
+                    <button class="btn secondary" type="submit">Add lead</button>
+                </div>
+            </form>
+            <table class="table" id="leadTable">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Source</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <section class="panel third fade-in">
+            <h2>Campaign scheduler</h2>
+            <p>Promotional campaigns must target at least 100 recipients.</p>
+            <form id="campaignForm">
+                <div class="form-grid">
+                    <input type="text" id="campaignName" placeholder="Campaign name">
+                    <select id="campaignChannel">
+                        <option value="sms">SMS</option>
+                        <option value="fcm">In-app (FCM)</option>
+                        <option value="both">Both</option>
+                    </select>
+                    <select id="campaignPurpose">
+                        <option value="promotional">promotional</option>
+                        <option value="delivering">delivering</option>
+                        <option value="ordering">ordering</option>
+                        <option value="price_change">price_change</option>
+                        <option value="new_product">new_product</option>
+                    </select>
+                    <input type="text" id="campaignSegment" placeholder="Segment (optional)">
+                    <input type="number" id="campaignAddress" placeholder="Address ID (optional)">
+                    <input type="number" id="campaignMin" placeholder="Min recipients" value="100">
+                    <input type="datetime-local" id="campaignSchedule">
+                    <input type="text" id="campaignTitle" placeholder="Title (optional)">
+                </div>
+                <textarea id="campaignBody" placeholder="Message body"></textarea>
+                <div class="form-actions">
+                    <button class="btn secondary" type="submit">Schedule campaign</button>
+                </div>
+            </form>
+            <table class="table" id="campaignTable">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Channel</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <section class="panel third fade-in">
+            <h2>Delivery runs</h2>
+            <p>Manual delivery plans by address.</p>
+            <form id="deliveryForm">
+                <div class="form-grid">
+                    <input type="number" id="deliveryAddress" placeholder="Address ID">
+                    <input type="date" id="deliveryDate">
+                    <input type="text" id="deliveryEta" placeholder="ETA window (e.g., 2-4pm)">
+                </div>
+                <div class="form-actions">
+                    <button class="btn secondary" type="submit">Save delivery run</button>
+                </div>
+            </form>
+            <table class="table" id="deliveryTable">
+                <thead>
+                <tr>
+                    <th>Address</th>
+                    <th>Date</th>
+                    <th>ETA</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <section class="panel half fade-in">
+            <h2>Inventory entries</h2>
+            <p>Track bulk purchases, returns, and manual stock updates.</p>
+            <form id="inventoryForm">
+                <div class="form-grid">
+                    <input type="number" id="inventoryGoods" placeholder="Goods ID">
+                    <input type="number" id="inventoryQty" placeholder="Quantity">
+                    <input type="number" id="inventoryCost" placeholder="Unit cost (ETB)" step="0.01">
+                    <select id="inventoryType">
+                        <option value="bulk_purchase">bulk_purchase</option>
+                        <option value="return">return</option>
+                        <option value="manual">manual</option>
+                        <option value="adjustment">adjustment</option>
+                    </select>
+                    <input type="text" id="inventoryNote" placeholder="Note">
+                </div>
+                <div class="form-actions">
+                    <button class="btn secondary" type="submit">Add entry</button>
+                </div>
+            </form>
+            <table class="table" id="inventoryTable">
+                <thead>
+                <tr>
+                    <th>Goods</th>
+                    <th>Qty</th>
+                    <th>Type</th>
+                    <th>Cost</th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+<script>
+    const api = {
+        overview: (date) => `../api/admin/overview.php?date=${encodeURIComponent(date)}`,
+        expenses: (date) => `../api/admin/expenses.php?date=${encodeURIComponent(date)}`,
+        customers: (params = {}) => {
+            const query = new URLSearchParams(params);
+            return `../api/admin/customers.php?${query.toString()}`;
+        },
+        leads: '../api/admin/leads.php',
+        campaigns: '../api/admin/campaigns.php',
+        deliveryRuns: '../api/admin/delivery_runs.php',
+        inventory: '../api/admin/inventory.php'
+    };
+
+    const state = {
+        date: new Date().toISOString().slice(0, 10)
+    };
+
+    const formatter = new Intl.NumberFormat('en-ET', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    function formatETB(value) {
+        return `ETB ${formatter.format(value || 0)}`;
+    }
+
+    function setLocalTime() {
+        const formatter = new Intl.DateTimeFormat('en-ET', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Africa/Addis_Ababa'
+        });
+        document.getElementById('localTime').textContent = formatter.format(new Date());
+    }
+
+    async function fetchJson(url, options = {}) {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`Request failed: ${response.status}`);
+        }
+        return response.json();
+    }
+
+    function drawTrend(trends) {
+        const canvas = document.getElementById('trendChart');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+
+        const padding = 32;
+        const points = trends.map(item => ({
+            revenue: item.revenue,
+            profit: item.profit,
+            expenses: item.expenses
+        }));
+        const maxValue = Math.max(1, ...points.map(p => Math.max(p.revenue, p.profit, p.expenses)));
+
+        const drawLine = (key, color) => {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            points.forEach((point, index) => {
+                const x = padding + (index / (points.length - 1 || 1)) * (width - padding * 2);
+                const y = height - padding - (point[key] / maxValue) * (height - padding * 2);
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+        };
+
+        ctx.strokeStyle = 'rgba(38, 70, 83, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        drawLine('revenue', '#2a9d8f');
+        drawLine('profit', '#f4a261');
+        drawLine('expenses', '#264653');
+    }
+
+    async function loadOverview() {
+        const data = await fetchJson(api.overview(state.date));
+        const metrics = data.metrics || {};
+        document.getElementById('dailyProfit').textContent = formatETB(metrics.dailyProfit);
+        document.getElementById('dailyRevenue').textContent = formatETB(metrics.dailyRevenue);
+        document.getElementById('dailyExpenses').textContent = formatETB(metrics.dailyExpenses);
+        document.getElementById('dailySupplierCost').textContent = formatETB(metrics.dailySupplierCost);
+        document.getElementById('newCustomers').textContent = metrics.newCustomersRegistered || 0;
+        document.getElementById('newCustomersOrdered').textContent = metrics.newCustomersOrdered || 0;
+        document.getElementById('totalCredit').textContent = formatETB(metrics.totalCredit);
+        drawTrend(data.trends || []);
+    }
+
+    async function loadExpenses() {
+        const data = await fetchJson(api.expenses(state.date));
+        const tbody = document.querySelector('#expenseTable tbody');
+        tbody.innerHTML = '';
+        (data.items || []).forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${item.expense_date}</td><td>${formatETB(item.amount)}</td><td>${item.reason}</td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function loadCustomers() {
+        const search = document.getElementById('customerSearch').value;
+        const segment = document.getElementById('segmentFilter').value;
+        const data = await fetchJson(api.customers({ search, segment, limit: 50 }));
+        const tbody = document.querySelector('#customerTable tbody');
+        tbody.innerHTML = '';
+        (data.items || []).forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.name || ''}<br><small>${item.phone || ''}</small></td>
+                <td>
+                    <select data-segment>
+                        ${['new','active','loyal','vip','at_risk','churned','potential'].map(seg =>
+                            `<option value="${seg}" ${seg === item.segment ? 'selected' : ''}>${seg}</option>`).join('')}
+                    </select>
+                </td>
+                <td><input type="number" step="0.01" value="${item.manual_profit || 0}" data-profit></td>
+                <td><input type="number" step="0.01" value="${item.manual_loss || 0}" data-loss></td>
+                <td><input type="number" step="0.01" value="${item.manual_credit || 0}" data-credit></td>
+                <td><button class="btn" data-save>Save</button></td>
+            `;
+            row.querySelector('[data-save]').addEventListener('click', async () => {
+                const segmentValue = row.querySelector('[data-segment]').value;
+                await fetchJson('../api/admin/customers.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'update_segment', customerId: item.id, segment: segmentValue })
+                });
+                await fetchJson('../api/admin/customers.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_financials',
+                        customerId: item.id,
+                        manualProfit: row.querySelector('[data-profit]').value,
+                        manualLoss: row.querySelector('[data-loss]').value,
+                        manualCredit: row.querySelector('[data-credit]').value
+                    })
+                });
+            });
+            tbody.appendChild(row);
+        });
+    }
+
+    async function loadLeads() {
+        const data = await fetchJson(api.leads);
+        const tbody = document.querySelector('#leadTable tbody');
+        tbody.innerHTML = '';
+        (data.items || []).forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${item.name || ''}</td><td>${item.phone || ''}</td><td>${item.lead_source || ''}</td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function loadCampaigns() {
+        const data = await fetchJson(api.campaigns);
+        const tbody = document.querySelector('#campaignTable tbody');
+        tbody.innerHTML = '';
+        (data.items || []).slice(0, 6).forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${item.name || ''}</td><td>${item.status || ''}</td><td>${item.channel || ''}</td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function loadDeliveryRuns() {
+        const data = await fetchJson(api.deliveryRuns);
+        const tbody = document.querySelector('#deliveryTable tbody');
+        tbody.innerHTML = '';
+        (data.items || []).slice(0, 6).forEach(item => {
+            const address = item.sub_city ? `${item.sub_city}, ${item.city}` : item.address_id;
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${address}</td><td>${item.run_date}</td><td>${item.eta_window || ''}</td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function loadInventory() {
+        const data = await fetchJson(api.inventory);
+        const tbody = document.querySelector('#inventoryTable tbody');
+        tbody.innerHTML = '';
+        (data.items || []).slice(0, 6).forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${item.goods_name || item.goods_id}</td><td>${item.quantity}</td><td>${item.entry_type}</td><td>${formatETB(item.unit_cost)}</td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function refreshAll() {
+        await Promise.all([
+            loadOverview(),
+            loadExpenses(),
+            loadCustomers(),
+            loadLeads(),
+            loadCampaigns(),
+            loadDeliveryRuns(),
+            loadInventory()
+        ]);
+    }
+
+    document.getElementById('dashboardDate').value = state.date;
+    document.getElementById('expenseDate').value = state.date;
+    document.getElementById('deliveryDate').value = state.date;
+
+    document.getElementById('dashboardDate').addEventListener('change', (event) => {
+        state.date = event.target.value;
+        refreshAll();
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', refreshAll);
+    document.getElementById('segmentFilter').addEventListener('change', loadCustomers);
+    document.getElementById('customerSearch').addEventListener('input', () => {
+        clearTimeout(window.customerSearchTimer);
+        window.customerSearchTimer = setTimeout(loadCustomers, 300);
+    });
+
+    document.getElementById('expenseForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await fetchJson('../api/admin/expenses.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                expenseDate: document.getElementById('expenseDate').value,
+                amount: document.getElementById('expenseAmount').value,
+                reason: document.getElementById('expenseReason').value
+            })
+        });
+        document.getElementById('expenseAmount').value = '';
+        document.getElementById('expenseReason').value = '';
+        loadExpenses();
+        loadOverview();
+    });
+
+    document.getElementById('leadForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await fetchJson(api.leads, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: document.getElementById('leadName').value,
+                phone: document.getElementById('leadPhone').value,
+                source: document.getElementById('leadSource').value
+            })
+        });
+        document.getElementById('leadName').value = '';
+        document.getElementById('leadPhone').value = '';
+        document.getElementById('leadSource').value = '';
+        loadLeads();
+    });
+
+    document.getElementById('campaignPurpose').addEventListener('change', (event) => {
+        if (event.target.value === 'promotional') {
+            document.getElementById('campaignMin').value = 100;
+        }
+    });
+
+    document.getElementById('campaignForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const schedule = document.getElementById('campaignSchedule').value;
+        const scheduleFormatted = schedule ? schedule.replace('T', ' ') : '';
+        await fetchJson(api.campaigns, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: document.getElementById('campaignName').value,
+                channel: document.getElementById('campaignChannel').value,
+                purpose: document.getElementById('campaignPurpose').value,
+                segment: document.getElementById('campaignSegment').value || null,
+                addressId: document.getElementById('campaignAddress').value || null,
+                minRecipients: document.getElementById('campaignMin').value,
+                scheduledAt: scheduleFormatted,
+                title: document.getElementById('campaignTitle').value,
+                body: document.getElementById('campaignBody').value
+            })
+        });
+        document.getElementById('campaignName').value = '';
+        document.getElementById('campaignBody').value = '';
+        loadCampaigns();
+    });
+
+    document.getElementById('deliveryForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await fetchJson(api.deliveryRuns, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                addressId: document.getElementById('deliveryAddress').value,
+                runDate: document.getElementById('deliveryDate').value,
+                etaWindow: document.getElementById('deliveryEta').value
+            })
+        });
+        document.getElementById('deliveryAddress').value = '';
+        document.getElementById('deliveryEta').value = '';
+        loadDeliveryRuns();
+    });
+
+    document.getElementById('inventoryForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await fetchJson(api.inventory, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                goodsId: document.getElementById('inventoryGoods').value,
+                quantity: document.getElementById('inventoryQty').value,
+                unitCost: document.getElementById('inventoryCost').value,
+                entryType: document.getElementById('inventoryType').value,
+                note: document.getElementById('inventoryNote').value
+            })
+        });
+        document.getElementById('inventoryGoods').value = '';
+        document.getElementById('inventoryQty').value = '';
+        document.getElementById('inventoryCost').value = '';
+        document.getElementById('inventoryNote').value = '';
+        loadInventory();
+    });
+
+    setLocalTime();
+    setInterval(setLocalTime, 60000);
+    refreshAll();
+</script>
+</body>
+</html>
