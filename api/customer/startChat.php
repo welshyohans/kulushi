@@ -156,7 +156,7 @@ try {
 * delivery fee for other accessories is based on the size and the price of the item.
 ## Address
 
-* **Merkato Dire Building, 3rd floor**.
+* **Merkato Dir Building, 3rd floor**.
 
 ## Smartphone IMEI and warranty support
 

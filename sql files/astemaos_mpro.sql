@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Oct 12, 2025 at 04:10 PM
--- Server version: 10.11.14-MariaDB-cll-lve
--- PHP Version: 8.4.11
+-- Generation Time: Jan 09, 2026 at 12:21 AM
+-- Server version: 10.11.15-MariaDB-cll-lve
+-- PHP Version: 8.4.16
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -31,7 +31,8 @@ CREATE TABLE `address` (
   `id` int(11) NOT NULL,
   `city` varchar(40) NOT NULL,
   `sub_city` varchar(40) NOT NULL,
-  `last_update_code` int(11) NOT NULL DEFAULT 0
+  `last_update_code` int(11) NOT NULL,
+  `has_supplier` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -83,8 +84,8 @@ CREATE TABLE `category` (
   `image_url` varchar(100) NOT NULL,
   `is_available` tinyint(1) NOT NULL DEFAULT 0,
   `last_update_code` int(11) NOT NULL,
-  `commission` int(11) NOT NULL,
-  `priority` int(11) NOT NULL DEFAULT 0
+  `priority` int(11) NOT NULL DEFAULT 0,
+  `commission` int(11) NOT NULL DEFAULT 10
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -96,7 +97,7 @@ CREATE TABLE `category` (
 CREATE TABLE `comments` (
   `id` int(11) NOT NULL,
   `customer_id` int(11) NOT NULL,
-  `comment` int(11) NOT NULL,
+  `comment` varchar(200) NOT NULL,
   `star_value` int(11) NOT NULL,
   `goods_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
@@ -139,10 +140,29 @@ CREATE TABLE `customer` (
   `use_telegram` int(11) NOT NULL DEFAULT 0,
   `total_credit` int(11) NOT NULL DEFAULT 0,
   `total_unpaid` int(11) NOT NULL DEFAULT 0,
-  `latitude` decimal(12,2) DEFAULT NULL,
-  `longitude` decimal(12,2) DEFAULT NULL,
   `permitted_credit` int(11) NOT NULL,
+  `latitude` double NOT NULL DEFAULT 0,
+  `longitude` double NOT NULL DEFAULT 0,
   `delivery_time_info` varchar(200) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_activity_uploads`
+--
+
+CREATE TABLE `customer_activity_uploads` (
+  `id` bigint(20) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `activity_id` bigint(20) NOT NULL,
+  `type` varchar(100) NOT NULL,
+  `target_id` varchar(255) DEFAULT NULL,
+  `metadata` text DEFAULT NULL,
+  `started_at_ms` bigint(20) NOT NULL,
+  `started_at` datetime NOT NULL,
+  `duration_millis` bigint(20) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -159,7 +179,22 @@ CREATE TABLE `customer_address` (
   `is_main_address` tinyint(1) NOT NULL DEFAULT 0,
   `priority` int(11) NOT NULL DEFAULT 0,
   `last_update_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_chat_records`
+--
+
+CREATE TABLE `customer_chat_records` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `customer_id` int(10) UNSIGNED NOT NULL,
+  `user_message` text NOT NULL,
+  `assistant_message` text NOT NULL,
+  `model` varchar(191) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -201,25 +236,6 @@ CREATE TABLE `customer_sms_uploads` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `customer_activity_uploads`
---
-
-CREATE TABLE `customer_activity_uploads` (
-  `id` bigint(20) NOT NULL,
-  `customer_id` int(11) NOT NULL,
-  `activity_id` bigint(20) NOT NULL,
-  `type` varchar(100) NOT NULL,
-  `target_id` varchar(255) DEFAULT NULL,
-  `metadata` text DEFAULT NULL,
-  `started_at_ms` bigint(20) NOT NULL,
-  `started_at` datetime NOT NULL,
-  `duration_millis` bigint(20) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `deliver_time`
 --
 
@@ -248,7 +264,7 @@ CREATE TABLE `goods` (
   `image_url` varchar(100) NOT NULL,
   `last_update_code` int(11) NOT NULL,
   `last_update` timestamp NOT NULL DEFAULT current_timestamp(),
-  `star_value` decimal(10,0) NOT NULL,
+  `star_value` double(10,2) NOT NULL,
   `tiktok_url` varchar(100) NOT NULL,
   `commission` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
@@ -302,6 +318,28 @@ CREATE TABLE `notification` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `notification_mangement`
+--
+
+CREATE TABLE `notification_mangement` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `customer_id` int(10) UNSIGNED NOT NULL,
+  `fcm_payment` tinyint(1) NOT NULL DEFAULT 1,
+  `fcm_delivering` tinyint(1) NOT NULL DEFAULT 1,
+  `fcm_ordering` tinyint(1) NOT NULL DEFAULT 1,
+  `fcm_price_change` tinyint(1) NOT NULL DEFAULT 1,
+  `fcm_new_product` tinyint(1) NOT NULL DEFAULT 1,
+  `sms_payment` tinyint(1) NOT NULL DEFAULT 1,
+  `sms_delivering` tinyint(1) NOT NULL DEFAULT 1,
+  `sms_ordering` tinyint(1) NOT NULL DEFAULT 1,
+  `sms_ads` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `ordered_list`
 --
 
@@ -309,11 +347,11 @@ CREATE TABLE `ordered_list` (
   `id` int(11) NOT NULL,
   `orders_id` int(11) DEFAULT NULL,
   `supplier_goods_id` int(11) DEFAULT NULL,
-  `goods_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT NULL,
-  `each_price` decimal(12,2) DEFAULT NULL,
-  `eligible_for_credit` tinyint(4) DEFAULT 1,
-  `status` tinyint(4) NOT NULL DEFAULT 0
+  `each_price` int(11) DEFAULT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 0,
+  `goods_id` int(11) NOT NULL,
+  `eligible_for_credit` tinyint(4) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -325,44 +363,16 @@ CREATE TABLE `ordered_list` (
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `customer_id` int(11) DEFAULT NULL,
-  `total_price` decimal(12,2) DEFAULT NULL,
-  `profit` int(11) DEFAULT 0,
-  `unpaid_cash` int(11) DEFAULT 0,
-  `unpaid_credit` int(11) DEFAULT 0,
-  `cash_amount` decimal(12,2) DEFAULT 0,
-  `credit_amount` decimal(12,2) DEFAULT NULL,
+  `total_price` int(11) DEFAULT NULL,
+  `profit` int(11) DEFAULT NULL,
   `order_time` timestamp NOT NULL DEFAULT current_timestamp(),
   `deliver_time` timestamp NULL DEFAULT NULL,
   `deliver_status` tinyint(4) DEFAULT 1 COMMENT 'ordered=1\r\nfast =2\r\npick-up =3\r\nprepared =4\r\nshipped =5\r\ndelivered =6\r\ncancelled =7\r\nchecked =8\r\nmixed =9',
-  `comment` varchar(500) NOT NULL DEFAULT 'no'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `return_order`
---
-
-CREATE TABLE `return_order` (
-  `id` int(11) NOT NULL,
-  `order_id` int(11) NOT NULL,
-  `customer_id` int(11) NOT NULL,
-  `total_price` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `is_comfirmed` tinyint(1) NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `returnOrderList`
---
-
-CREATE TABLE `returnOrderList` (
-  `id` int(11) NOT NULL,
-  `order_list_id` int(11) NOT NULL,
-  `return_order_id` int(11) NOT NULL,
-  `quantity` int(11) NOT NULL DEFAULT 0,
-  `price` decimal(12,2) NOT NULL DEFAULT 0.00
+  `comment` varchar(500) NOT NULL DEFAULT 'no',
+  `credit_amount` int(11) NOT NULL,
+  `cash_amount` int(11) NOT NULL,
+  `unpaid_cash` int(11) NOT NULL DEFAULT 0,
+  `unpaid_credit` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -400,6 +410,34 @@ CREATE TABLE `purchase_goods` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `returnOrderList`
+--
+
+CREATE TABLE `returnOrderList` (
+  `id` int(11) NOT NULL,
+  `order_list_id` int(11) NOT NULL,
+  `return_order_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 0,
+  `price` decimal(12,2) NOT NULL DEFAULT 0.00
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `return_order`
+--
+
+CREATE TABLE `return_order` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `total_price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `is_comfirmed` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `settings`
 --
 
@@ -419,14 +457,14 @@ CREATE TABLE `supplier` (
   `shop_name` varchar(50) NOT NULL,
   `shop_detail` varchar(150) NOT NULL,
   `shop_type` varchar(50) NOT NULL,
-  `address_id` int(11) DEFAULT NULL,
   `phone` varchar(20) NOT NULL,
   `priority` int(11) NOT NULL,
   `password` varchar(20) NOT NULL,
   `image` varchar(100) NOT NULL,
   `isVisible` int(11) NOT NULL,
   `last_update` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'this is the last date the shop owner update... to show them to retailers',
-  `last_update_code` int(11) NOT NULL
+  `last_update_code` int(11) NOT NULL,
+  `address_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
@@ -456,6 +494,7 @@ CREATE TABLE `supplier_goods` (
 
 CREATE TABLE `supplier_order` (
   `id` int(11) NOT NULL,
+  `supplier_id` int(11) NOT NULL,
   `customer_id` int(11) NOT NULL,
   `total_price` decimal(12,2) NOT NULL DEFAULT 0.00,
   `order_time` datetime NOT NULL,
@@ -478,7 +517,7 @@ CREATE TABLE `supplier_order_list` (
   `quantity` int(11) NOT NULL DEFAULT 0,
   `price` decimal(12,2) NOT NULL DEFAULT 0.00,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -563,12 +602,24 @@ ALTER TABLE `customer`
   ADD KEY `address_id` (`address_id`);
 
 --
+-- Indexes for table `customer_activity_uploads`
+--
+ALTER TABLE `customer_activity_uploads`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_customer_activity` (`customer_id`,`activity_id`),
+  ADD KEY `customer_activity_uploads_customer_idx` (`customer_id`);
+
+--
 -- Indexes for table `customer_address`
 --
 ALTER TABLE `customer_address`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `customer_id` (`customer_id`),
-  ADD KEY `address_id` (`address_id`);
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `customer_chat_records`
+--
+ALTER TABLE `customer_chat_records`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `customer_contact_uploads`
@@ -585,14 +636,6 @@ ALTER TABLE `customer_sms_uploads`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_customer_sms` (`customer_id`,`message_id`),
   ADD KEY `customer_sms_uploads_customer_idx` (`customer_id`);
-
---
--- Indexes for table `customer_activity_uploads`
---
-ALTER TABLE `customer_activity_uploads`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_customer_activity` (`customer_id`,`activity_id`),
-  ADD KEY `customer_activity_uploads_customer_idx` (`customer_id`);
 
 --
 -- Indexes for table `deliver_time`
@@ -629,6 +672,13 @@ ALTER TABLE `notification`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `notification_mangement`
+--
+ALTER TABLE `notification_mangement`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_notification_customer` (`customer_id`);
+
+--
 -- Indexes for table `ordered_list`
 --
 ALTER TABLE `ordered_list`
@@ -642,22 +692,6 @@ ALTER TABLE `ordered_list`
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`id`),
   ADD KEY `customer_id` (`customer_id`);
-
---
--- Indexes for table `return_order`
---
-ALTER TABLE `return_order`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `order_id` (`order_id`),
-  ADD KEY `customer_id` (`customer_id`);
-
---
--- Indexes for table `returnOrderList`
---
-ALTER TABLE `returnOrderList`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `order_list_id` (`order_list_id`),
-  ADD KEY `return_order_id` (`return_order_id`);
 
 --
 -- Indexes for table `payments`
@@ -674,6 +708,18 @@ ALTER TABLE `purchase_goods`
   ADD KEY `admins_id` (`admins_id`);
 
 --
+-- Indexes for table `returnOrderList`
+--
+ALTER TABLE `returnOrderList`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `return_order`
+--
+ALTER TABLE `return_order`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `settings`
 --
 ALTER TABLE `settings`
@@ -683,8 +729,7 @@ ALTER TABLE `settings`
 -- Indexes for table `supplier`
 --
 ALTER TABLE `supplier`
-  ADD PRIMARY KEY (`shop_id`),
-  ADD KEY `address_id` (`address_id`);
+  ADD PRIMARY KEY (`shop_id`);
 
 --
 -- Indexes for table `supplier_goods`
@@ -696,17 +741,13 @@ ALTER TABLE `supplier_goods`
 -- Indexes for table `supplier_order`
 --
 ALTER TABLE `supplier_order`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `customer_id` (`customer_id`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `supplier_order_list`
 --
 ALTER TABLE `supplier_order_list`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `supplier_order_id` (`supplier_order_id`),
-  ADD KEY `goods_id` (`goods_id`),
-  ADD KEY `order_id` (`order_id`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `terms_conditions`
@@ -767,10 +808,22 @@ ALTER TABLE `customer`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `customer_activity_uploads`
+--
+ALTER TABLE `customer_activity_uploads`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `customer_address`
 --
 ALTER TABLE `customer_address`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `customer_chat_records`
+--
+ALTER TABLE `customer_chat_records`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `customer_contact_uploads`
@@ -782,12 +835,6 @@ ALTER TABLE `customer_contact_uploads`
 -- AUTO_INCREMENT for table `customer_sms_uploads`
 --
 ALTER TABLE `customer_sms_uploads`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `customer_activity_uploads`
---
-ALTER TABLE `customer_activity_uploads`
   MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
@@ -821,6 +868,12 @@ ALTER TABLE `notification`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `notification_mangement`
+--
+ALTER TABLE `notification_mangement`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `ordered_list`
 --
 ALTER TABLE `ordered_list`
@@ -833,18 +886,6 @@ ALTER TABLE `orders`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `return_order`
---
-ALTER TABLE `return_order`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `returnOrderList`
---
-ALTER TABLE `returnOrderList`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
@@ -854,6 +895,18 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `purchase_goods`
 --
 ALTER TABLE `purchase_goods`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `returnOrderList`
+--
+ALTER TABLE `returnOrderList`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `return_order`
+--
+ALTER TABLE `return_order`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -910,11 +963,10 @@ ALTER TABLE `customer`
   ADD CONSTRAINT `customer_ibfk_2` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
 
 --
--- Constraints for table `customer_address`
+-- Constraints for table `customer_activity_uploads`
 --
-ALTER TABLE `customer_address`
-  ADD CONSTRAINT `customer_address_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`),
-  ADD CONSTRAINT `customer_address_ibfk_2` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
+ALTER TABLE `customer_activity_uploads`
+  ADD CONSTRAINT `customer_activity_uploads_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
 
 --
 -- Constraints for table `customer_contact_uploads`
@@ -929,22 +981,10 @@ ALTER TABLE `customer_sms_uploads`
   ADD CONSTRAINT `customer_sms_uploads_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
 
 --
--- Constraints for table `customer_activity_uploads`
---
-ALTER TABLE `customer_activity_uploads`
-  ADD CONSTRAINT `customer_activity_uploads_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
-
---
 -- Constraints for table `deliver_time`
 --
 ALTER TABLE `deliver_time`
   ADD CONSTRAINT `deliver_time_ibfk_1` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
-
---
--- Constraints for table `supplier`
---
-ALTER TABLE `supplier`
-  ADD CONSTRAINT `supplier_ibfk_1` FOREIGN KEY (`address_id`) REFERENCES `address` (`id`);
 
 --
 -- Constraints for table `goods`
@@ -964,33 +1004,6 @@ ALTER TABLE `manual_sell`
 --
 ALTER TABLE `ordered_list`
   ADD CONSTRAINT `ordered_list_ibfk_1` FOREIGN KEY (`orders_id`) REFERENCES `orders` (`id`);
-
---
--- Constraints for table `return_order`
---
-ALTER TABLE `return_order`
-  ADD CONSTRAINT `return_order_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
-  ADD CONSTRAINT `return_order_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
-
---
--- Constraints for table `returnOrderList`
---
-ALTER TABLE `returnOrderList`
-  ADD CONSTRAINT `returnOrderList_ibfk_1` FOREIGN KEY (`return_order_id`) REFERENCES `return_order` (`id`),
-  ADD CONSTRAINT `returnOrderList_ibfk_2` FOREIGN KEY (`order_list_id`) REFERENCES `ordered_list` (`id`);
-
---
--- Constraints for table `supplier_order`
---
-ALTER TABLE `supplier_order`
-  ADD CONSTRAINT `supplier_order_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`);
-
---
--- Constraints for table `supplier_order_list`
---
-ALTER TABLE `supplier_order_list`
-  ADD CONSTRAINT `supplier_order_list_ibfk_1` FOREIGN KEY (`supplier_order_id`) REFERENCES `supplier_order` (`id`),
-  ADD CONSTRAINT `supplier_order_list_ibfk_2` FOREIGN KEY (`goods_id`) REFERENCES `goods` (`id`);
 
 --
 -- Constraints for table `purchase_goods`
