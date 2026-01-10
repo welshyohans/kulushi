@@ -592,16 +592,52 @@
         async function fetchJson(url, options = {}) {
             try {
                 const response = await fetch(url, options);
-                if (!response.ok) {
-                    throw new Error(`Request failed: ${response.status}`);
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (parseError) {
+                    payload = null;
                 }
-                return response.json();
+
+                if (!response.ok) {
+                    const message = payload && payload.message ? payload.message : `Request failed: ${response.status}`;
+                    const error = new Error(message);
+                    error.status = response.status;
+                    error.payload = payload;
+                    throw error;
+                }
+
+                return payload !== null ? payload : {};
             } catch (error) {
                 // Check if running from file:// protocol (not served)
                 if (window.location.protocol === 'file:') {
                     console.warn('Cannot make API calls when opening file directly. Please run via a web server (e.g., XAMPP, php -S localhost:8000, or similar).');
                 }
                 throw error;
+            }
+        }
+
+        function renderOverviewWarnings(warnings = []) {
+            const statsGrid = document.getElementById('statsGrid');
+            if (!statsGrid) {
+                return;
+            }
+
+            const existing = document.getElementById('overviewWarning');
+            if (!warnings.length) {
+                if (existing) {
+                    existing.remove();
+                }
+                return;
+            }
+
+            const warning = existing || document.createElement('div');
+            warning.id = 'overviewWarning';
+            warning.style.cssText = 'grid-column: 1 / -1; background: #fff3cd; color: #856404; padding: 14px 16px; border-radius: 10px; border: 1px solid #ffc107;';
+            warning.innerHTML = `<strong>Schema notice</strong><br>${warnings.map(item => item.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>')}`;
+
+            if (!existing) {
+                statsGrid.insertBefore(warning, statsGrid.firstChild);
             }
         }
 
@@ -651,6 +687,7 @@
 
         async function loadOverview() {
             const data = await fetchJson(api.overview(state.date));
+            renderOverviewWarnings(data.warnings || []);
             const metrics = data.metrics || {};
             document.getElementById('dailyProfit').textContent = formatETB(metrics.dailyProfit);
             document.getElementById('dailyRevenue').textContent = formatETB(metrics.dailyRevenue);
