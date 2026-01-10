@@ -31,6 +31,34 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+    // Check if delivery_runs table exists
+    $tableExists = function(PDO $db, string $tableName): bool {
+        try {
+            $stmt = $db->query("SHOW TABLES LIKE '$tableName'");
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    };
+
+    $hasDeliveryRuns = $tableExists($db, 'delivery_runs');
+
+    if (!$hasDeliveryRuns) {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $respond(200, [
+                'success' => true,
+                'count' => 0,
+                'items' => [],
+                'message' => 'delivery_runs table not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        } else {
+            $respond(400, [
+                'success' => false,
+                'message' => 'delivery_runs table not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        }
+    }
+
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = $db->prepare(
             'SELECT dr.id, dr.address_id, dr.run_date, dr.eta_window, dr.note, dr.status, dr.created_at,

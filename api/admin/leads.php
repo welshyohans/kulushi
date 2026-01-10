@@ -49,9 +49,43 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+    // Helper function to check if a column exists in a table
+    $columnExists = function(PDO $db, string $tableName, string $columnName): bool {
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM `$tableName` LIKE '$columnName'");
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    };
+
+    // Check which migration columns exist
+    $hasIsLead = $columnExists($db, 'customer', 'is_lead');
+    $hasSegment = $columnExists($db, 'customer', 'segment');
+    $hasLeadSource = $columnExists($db, 'customer', 'lead_source');
+
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        // If is_lead column doesn't exist, return empty list with message
+        if (!$hasIsLead) {
+            $respond(200, [
+                'success' => true,
+                'count' => 0,
+                'items' => [],
+                'message' => 'is_lead column not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        }
+
+        // Build dynamic SELECT
+        $selectColumns = ['id', 'name', 'phone', 'register_at'];
+        if ($hasSegment) {
+            $selectColumns[] = 'segment';
+        }
+        if ($hasLeadSource) {
+            $selectColumns[] = 'lead_source';
+        }
+
         $stmt = $db->prepare(
-            'SELECT id, name, phone, segment, lead_source, register_at
+            'SELECT ' . implode(', ', $selectColumns) . '
              FROM customer
              WHERE COALESCE(is_lead, 0) = 1
              ORDER BY register_at DESC'
@@ -64,6 +98,14 @@ try {
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         $respond(405, ['success' => false, 'message' => 'Method not allowed.']);
+    }
+
+    // Check if required columns exist for POST
+    if (!$hasIsLead || !$hasSegment || !$hasLeadSource) {
+        $respond(400, [
+            'success' => false,
+            'message' => 'Required columns (is_lead, segment, lead_source) not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+        ]);
     }
 
     $rawBody = file_get_contents('php://input');

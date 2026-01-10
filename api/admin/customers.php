@@ -33,16 +33,39 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+    // Helper function to check if a column exists in a table
+    $columnExists = function(PDO $db, string $tableName, string $columnName): bool {
+        try {
+            $stmt = $db->query("SHOW COLUMNS FROM `$tableName` LIKE '$columnName'");
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    };
+
+    // Check which migration columns exist
+    $hasIsLead = $columnExists($db, 'customer', 'is_lead');
+    $hasSegment = $columnExists($db, 'customer', 'segment');
+    $hasManualProfit = $columnExists($db, 'customer', 'manual_profit');
+    $hasManualLoss = $columnExists($db, 'customer', 'manual_loss');
+    $hasManualCredit = $columnExists($db, 'customer', 'manual_credit');
+
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $segment = isset($_GET['segment']) ? trim((string)$_GET['segment']) : '';
         $search = isset($_GET['search']) ? trim((string)$_GET['search']) : '';
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 200;
         $limit = max(1, min($limit, 500));
 
-        $where = ['COALESCE(c.is_lead, 0) = 0'];
+        $where = [];
         $params = [];
 
-        if ($segment !== '') {
+        // Only filter by is_lead if the column exists
+        if ($hasIsLead) {
+            $where[] = 'COALESCE(c.is_lead, 0) = 0';
+        }
+
+        // Only filter by segment if the column exists
+        if ($segment !== '' && $hasSegment) {
             $where[] = 'c.segment = :segment';
             $params[':segment'] = $segment;
         }
@@ -52,24 +75,51 @@ try {
             $params[':search'] = '%' . $search . '%';
         }
 
+        // Build dynamic SELECT columns based on what exists
+        $selectColumns = [
+            'c.id',
+            'c.name',
+            'c.phone',
+            'c.shop_name',
+            'c.total_credit',
+            'c.register_at'
+        ];
+
+        if ($hasSegment) {
+            $selectColumns[] = 'c.segment';
+        } else {
+            $selectColumns[] = "'new' AS segment";
+        }
+
+        if ($hasManualProfit) {
+            $selectColumns[] = 'c.manual_profit';
+        } else {
+            $selectColumns[] = '0 AS manual_profit';
+        }
+
+        if ($hasManualLoss) {
+            $selectColumns[] = 'c.manual_loss';
+        } else {
+            $selectColumns[] = '0 AS manual_loss';
+        }
+
+        if ($hasManualCredit) {
+            $selectColumns[] = 'c.manual_credit';
+        } else {
+            $selectColumns[] = '0 AS manual_credit';
+        }
+
+        $whereClause = count($where) > 0 ? 'WHERE ' . implode(' AND ', $where) : '';
+
         $sql = '
             SELECT
-                c.id,
-                c.name,
-                c.phone,
-                c.shop_name,
-                c.segment,
-                c.manual_profit,
-                c.manual_loss,
-                c.manual_credit,
-                c.total_credit,
-                c.register_at,
+                ' . implode(', ', $selectColumns) . ',
                 COALESCE(SUM(CASE WHEN o.deliver_status IN (4,5,6) THEN o.profit ELSE 0 END), 0) AS commission_profit,
                 COALESCE(SUM(CASE WHEN o.deliver_status != 7 THEN o.total_price ELSE 0 END), 0) AS revenue,
                 COUNT(o.id) AS orders_count
             FROM customer c
             LEFT JOIN orders o ON o.customer_id = c.id
-            WHERE ' . implode(' AND ', $where) . '
+            ' . $whereClause . '
             GROUP BY c.id
             ORDER BY c.register_at DESC
             LIMIT :limit';
@@ -86,7 +136,14 @@ try {
         $respond(200, [
             'success' => true,
             'count' => count($rows),
-            'items' => $rows
+            'items' => $rows,
+            'schema_status' => [
+                'has_segment' => $hasSegment,
+                'has_manual_profit' => $hasManualProfit,
+                'has_manual_loss' => $hasManualLoss,
+                'has_manual_credit' => $hasManualCredit,
+                'has_is_lead' => $hasIsLead
+            ]
         ]);
     }
 
@@ -107,6 +164,13 @@ try {
     }
 
     if ($action === 'update_segment') {
+        if (!$hasSegment) {
+            $respond(400, [
+                'success' => false,
+                'message' => 'segment column not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        }
+
         $segment = isset($payload['segment']) ? trim((string)$payload['segment']) : '';
         if ($segment === '' || !in_array($segment, $allowedSegments, true)) {
             $respond(422, [
@@ -125,6 +189,13 @@ try {
     }
 
     if ($action === 'update_financials') {
+        if (!$hasManualProfit || !$hasManualLoss || !$hasManualCredit) {
+            $respond(400, [
+                'success' => false,
+                'message' => 'Manual profit/loss/credit columns not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        }
+
         $manualProfit = isset($payload['manualProfit']) ? (float)$payload['manualProfit'] : 0.0;
         $manualLoss = isset($payload['manualLoss']) ? (float)$payload['manualLoss'] : 0.0;
         $manualCredit = isset($payload['manualCredit']) ? (float)$payload['manualCredit'] : 0.0;

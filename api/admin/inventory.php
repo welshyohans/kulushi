@@ -31,6 +31,34 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+    // Check if inventory_entries table exists
+    $tableExists = function(PDO $db, string $tableName): bool {
+        try {
+            $stmt = $db->query("SHOW TABLES LIKE '$tableName'");
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    };
+
+    $hasInventoryEntries = $tableExists($db, 'inventory_entries');
+
+    if (!$hasInventoryEntries) {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $respond(200, [
+                'success' => true,
+                'count' => 0,
+                'items' => [],
+                'message' => 'inventory_entries table not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        } else {
+            $respond(400, [
+                'success' => false,
+                'message' => 'inventory_entries table not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        }
+    }
+
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = $db->prepare(
             'SELECT ie.id, ie.goods_id, g.name AS goods_name, ie.quantity, ie.unit_cost, ie.entry_type, ie.note, ie.created_at

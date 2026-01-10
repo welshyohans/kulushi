@@ -33,6 +33,36 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
+    // Check if daily_expenses table exists
+    $tableExists = function(PDO $db, string $tableName): bool {
+        try {
+            $stmt = $db->query("SHOW TABLES LIKE '$tableName'");
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    };
+
+    $hasDailyExpenses = $tableExists($db, 'daily_expenses');
+
+    if (!$hasDailyExpenses) {
+        // Table doesn't exist - return empty data with a message
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $respond(200, [
+                'success' => true,
+                'date' => date('Y-m-d'),
+                'total' => 0,
+                'items' => [],
+                'message' => 'daily_expenses table not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        } else {
+            $respond(400, [
+                'success' => false,
+                'message' => 'daily_expenses table not found. Please run the migration: sql files/admin_dashboard_migration.sql'
+            ]);
+        }
+    }
+
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $dateRaw = isset($_GET['date']) ? trim((string)$_GET['date']) : date('Y-m-d');
         $date = DateTime::createFromFormat('Y-m-d', $dateRaw);
