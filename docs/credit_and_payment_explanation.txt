@@ -1,0 +1,69 @@
+MerkatoPro credit and payment system explanation.
+
+1) What “credit” means in this app
+In this project, credit is not a payment gateway like Telebirr, Stripe, or PayPal.
+It is an internal “buy now, pay later” limit for each customer.
+
+In the database table customer:
+- permitted_credit is the customer’s credit limit (how much they are allowed to owe).
+- total_credit is the customer’s outstanding credit balance (how much credit is still unpaid).
+- total_unpaid is the customer’s total outstanding balance (cash unpaid plus credit unpaid).
+
+2) How an order becomes cash vs credit
+Each order has items in the ordered_list table.
+Each item has a flag called eligible_for_credit.
+That flag decides whether that item is allowed to be paid using credit.
+
+When an admin updates an order to deliver_status = 6 (Delivered), the API api/order/updateDeliverStatus.php recalculates the order totals.
+It does:
+- Total price = sum(each_price * quantity) for active items.
+- Eligible total = sum(each_price * quantity) only for items where eligible_for_credit = 1.
+- Available credit = permitted_credit minus the customer’s current total_credit (outstanding).
+- credit_amount = min(available credit, eligible total, total price).
+- cash_amount = total price minus credit_amount.
+
+Then it writes these values into the orders table:
+- cash_amount and credit_amount
+- unpaid_cash and unpaid_credit
+So after delivery, the order becomes an outstanding debt for the customer.
+
+It also increases the customer totals:
+- customer.total_credit increases by credit_amount
+- customer.total_unpaid increases by total price
+
+3) How a customer payment is recorded and applied
+There is no automatic payment gateway integration in the backend.
+Payments are recorded manually using api/order/insertPayment.php.
+
+When a payment is posted, the system:
+- Finds the customer’s delivered orders (deliver_status = 6) that still have unpaid_cash or unpaid_credit.
+- Pays unpaid_cash first (oldest orders first).
+- If money is still remaining, it then pays unpaid_credit (oldest orders first).
+- Updates each order’s unpaid_cash and unpaid_credit.
+- Recalculates customer.total_credit and customer.total_unpaid from the remaining unpaid amounts.
+- Inserts a row into the payments table with amount, through, additional_info, and credit_left_after_payment.
+
+4) What the admin dashboard “Total Credit” shows
+The admin overview endpoint api/admin/overview.php reports total credit by summing customer.total_credit, and optionally adding manual_credit if that column exists.
+So that dashboard number is the total outstanding credit exposure across customers.
+
+5) What can be improved (high impact)
+Security and access control:
+- Add authentication and authorization on admin endpoints (updateDeliverStatus, insertPayment, updateCredit). Right now CORS is open and there is no role check in these files.
+
+Correctness and accounting:
+- Add a payment allocation ledger (store how each payment was split across orders) so you can audit and reverse mistakes.
+- Handle overpayments (when payment amount is bigger than unpaid) by storing customer credit balance or carry-forward.
+- Make delivered status reversible safely: if you change a delivered order to cancelled or non-delivered, customer totals must be recalculated to avoid wrong total_credit/total_unpaid.
+
+Money precision:
+- Be consistent: either store all money as integers (ETB) everywhere, or migrate columns to DECIMAL(12,2) and keep two decimals in code.
+
+Credit policy improvements:
+- Add credit aging and due dates (the SQL has a credit table with due_date, but it is not updated by the current order/payment flow).
+- Add automated reminders (SMS) for overdue credit.
+
+Payment method UX:
+- Standardize the through field (Cash, CBE, BOA, Telebirr, etc) and require a transaction reference in additional_info for bank/mobile transfers.
+
+End of explanation.

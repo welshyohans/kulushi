@@ -52,6 +52,8 @@ if ($customerId === false) {
     ]);
 }
 
+$historyStartDate = '2026-01-09 00:00:00';
+
 try {
     $database = new Database();
     $db = $database->connect();
@@ -69,8 +71,18 @@ try {
         ]);
     }
 
-    $ordersStmt = $db->prepare('SELECT id,total_price, order_time, deliver_status, unpaid_cash, unpaid_credit FROM orders WHERE customer_id = :customerId ORDER BY order_time DESC');
-    $ordersStmt->execute([':customerId' => $customerId]);
+    $ordersStmt = $db->prepare(
+        'SELECT id,total_price, order_time, deliver_status, unpaid_cash, unpaid_credit
+         FROM orders
+         WHERE customer_id = :customerId
+           AND order_time >= :historyStartDate
+           AND deliver_status != 7
+         ORDER BY order_time DESC'
+    );
+    $ordersStmt->execute([
+        ':customerId' => $customerId,
+        ':historyStartDate' => $historyStartDate
+    ]);
     $orderRows = $ordersStmt->fetchAll();
     $orders = array_map(function (array $row): array {
         return [
@@ -89,14 +101,27 @@ try {
             COALESCE(SUM(CASE WHEN deliver_status = 6 AND unpaid_credit > 0 THEN unpaid_credit ELSE 0 END), 0) AS total_unpaid_credit
         FROM orders
         WHERE customer_id = :customerId
+          AND order_time >= :historyStartDate
     ');
-    $totalsStmt->execute([':customerId' => $customerId]);
+    $totalsStmt->execute([
+        ':customerId' => $customerId,
+        ':historyStartDate' => $historyStartDate
+    ]);
     $totalsRow = $totalsStmt->fetch() ?: ['total_unpaid_cash' => 0, 'total_unpaid_credit' => 0];
     $totalUnpaidCash = (float)$totalsRow['total_unpaid_cash'];
     $totalUnpaidCredit = (float)$totalsRow['total_unpaid_credit'];
 
-    $paymentsStmt = $db->prepare('SELECT paid_date, amount, `through`, additional_info, credit_left_after_payment FROM payments WHERE customer_id = :customerId ORDER BY paid_date DESC');
-    $paymentsStmt->execute([':customerId' => $customerId]);
+    $paymentsStmt = $db->prepare(
+        'SELECT paid_date, amount, `through`, additional_info, credit_left_after_payment
+         FROM payments
+         WHERE customer_id = :customerId
+           AND paid_date >= :historyStartDate
+         ORDER BY paid_date DESC'
+    );
+    $paymentsStmt->execute([
+        ':customerId' => $customerId,
+        ':historyStartDate' => $historyStartDate
+    ]);
     $paymentRows = $paymentsStmt->fetchAll();
     $payments = array_map(function (array $row): array {
         return [

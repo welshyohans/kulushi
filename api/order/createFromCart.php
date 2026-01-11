@@ -189,48 +189,101 @@ try {
         ];
     }
 
-    $orderStmt = $db->prepare(
-        'INSERT INTO orders (customer_id, total_price, profit, unpaid_cash, unpaid_credit, cash_amount, credit_amount, deliver_status, comment)
-         VALUES (:customer_id, :total_price, :profit, 0, 0, :cash_amount, 0, 1, :comment)'
+    $mergedIntoExisting = false;
+    $existingDeliverStatus = null;
+    $existingOrderStmt = $db->prepare(
+        'SELECT id, deliver_status
+         FROM orders
+         WHERE customer_id = :customerId
+           AND deliver_status IN (1, 3)
+           AND order_time >= CURDATE()
+           AND order_time < (CURDATE() + INTERVAL 1 DAY)
+         ORDER BY order_time DESC
+         LIMIT 1
+         FOR UPDATE'
     );
-    $comment = sprintf('Auto order via web — items: %d, quantity: %d', count($preparedItems), $totalQuantity);
-    $orderStmt->execute([
-        ':customer_id' => $customerId,
-        ':total_price' => $totalPrice,
-        ':profit' => number_format($totalProfit, 2, '.', ''),
-        ':cash_amount' => $totalPrice,
-        ':comment' => $comment
-    ]);
-    $orderId = (int)$db->lastInsertId();
+    $existingOrderStmt->execute([':customerId' => $customerId]);
+    $existingOrderRow = $existingOrderStmt->fetch();
+    $existingOrderId = is_array($existingOrderRow) ? ($existingOrderRow['id'] ?? false) : false;
+
+    if ($existingOrderId !== false) {
+        $orderId = (int)$existingOrderId;
+        $mergedIntoExisting = true;
+        $existingDeliverStatus = $existingOrderRow['deliver_status'] ?? null;
+
+        $isPickupPricing = ((int)$existingDeliverStatus === 3);
+        $effectiveTotalPrice = $isPickupPricing ? max(0.0, $totalPrice - $totalProfit) : $totalPrice;
+        $effectiveTotalProfit = $isPickupPricing ? 0.0 : $totalProfit;
+
+        $updateOrderStmt = $db->prepare(
+            'UPDATE orders
+             SET total_price = COALESCE(total_price, 0) + :total_price,
+                 profit = COALESCE(profit, 0) + :profit,
+                 cash_amount = COALESCE(cash_amount, 0) + :cash_amount,
+                 credit_amount = COALESCE(credit_amount, 0) + :credit_amount
+             WHERE id = :orderId'
+        );
+        $updateOrderStmt->execute([
+            ':total_price' => $effectiveTotalPrice,
+            ':profit' => number_format($effectiveTotalProfit, 2, '.', ''),
+            ':cash_amount' => $effectiveTotalPrice,
+            ':credit_amount' => 0,
+            ':orderId' => $orderId
+        ]);
+    } else {
+        $orderStmt = $db->prepare(
+            'INSERT INTO orders (customer_id, total_price, profit, unpaid_cash, unpaid_credit, cash_amount, credit_amount, deliver_status, comment)
+             VALUES (:customer_id, :total_price, :profit, 0, 0, :cash_amount, 0, 1, :comment)'
+        );
+        $comment = sprintf('Auto order via web — items: %d, quantity: %d', count($preparedItems), $totalQuantity);
+        $orderStmt->execute([
+            ':customer_id' => $customerId,
+            ':total_price' => $totalPrice,
+            ':profit' => number_format($totalProfit, 2, '.', ''),
+            ':cash_amount' => $totalPrice,
+            ':comment' => $comment
+        ]);
+        $orderId = (int)$db->lastInsertId();
+    }
 
     $orderListStmt = $db->prepare(
         'INSERT INTO ordered_list (orders_id, supplier_goods_id, goods_id, quantity, each_price, supplier_price, commission, line_profit, eligible_for_credit, status)
          VALUES (:orders_id, :supplier_goods_id, :goods_id, :quantity, :each_price, :supplier_price, :commission, :line_profit, :eligible_for_credit, 1)'
     );
 
+    $isPickupPricing = $mergedIntoExisting && ((int)$existingDeliverStatus === 3);
     foreach ($preparedItems as $prepared) {
+        $eachPrice = $isPickupPricing
+            ? max(0.0, round((float)$prepared['unit_price'] - (float)$prepared['commission'], 2))
+            : (float)$prepared['unit_price'];
+        $commission = $isPickupPricing ? 0.0 : (float)$prepared['commission'];
+        $lineProfit = $isPickupPricing ? 0.0 : (float)$prepared['line_profit'];
+
         $orderListStmt->execute([
             ':orders_id' => $orderId,
             ':supplier_goods_id' => $prepared['supplier_goods_id'],
             ':goods_id' => $prepared['goods_id'],
             ':quantity' => $prepared['quantity'],
-            ':each_price' => $prepared['unit_price'],
+            ':each_price' => $eachPrice,
             ':supplier_price' => $prepared['supplier_price'],
-            ':commission' => $prepared['commission'],
-            ':line_profit' => $prepared['line_profit'],
+            ':commission' => $commission,
+            ':line_profit' => $lineProfit,
             ':eligible_for_credit' => 0
         ]);
     }
 
     $db->commit();
 
+    $responseTotalPrice = $isPickupPricing ? max(0.0, $totalPrice - $totalProfit) : $totalPrice;
+
     $responsePayload = [
         'success' => true,
-        'message' => 'Order submitted successfully.',
+        'message' => $mergedIntoExisting ? 'Order updated successfully.' : 'Order submitted successfully.',
         'orderId' => $orderId,
-        'totalPrice' => $totalPrice,
+        'totalPrice' => $responseTotalPrice,
         'itemCount' => count($preparedItems),
-        'totalQuantity' => $totalQuantity
+        'totalQuantity' => $totalQuantity,
+        'mergedIntoExistingOrder' => $mergedIntoExisting
     ];
 
     echo json_encode($responsePayload);
@@ -238,11 +291,16 @@ try {
     try {
         $sms = new SMS();
         $customerPhone = formatPhoneForSms($customer['phone'] ?? null);
-        $friendlyTotal = number_format($totalPrice, 2, '.', ',');
-        $summaryLines = array_map(static function (array $item): string {
+        $friendlyTotal = number_format($responseTotalPrice, 2, '.', ',');
+        $summaryLines = array_map(static function (array $item) use ($isPickupPricing): string {
             $name = $item['goods_name'] ?? 'Goods';
             $qty = (int)$item['quantity'];
-            $price = number_format((float)$item['unit_price'], 2, '.', ',');
+            $unit = (float)($item['unit_price'] ?? 0);
+            $commission = (float)($item['commission'] ?? 0);
+            if ($isPickupPricing) {
+                $unit = max(0.0, $unit - $commission);
+            }
+            $price = number_format($unit, 2, '.', ',');
             return sprintf('%s=%d*%s', $name, $qty, $price);
         }, $preparedItems);
         $summaryText = implode(', ', $summaryLines);

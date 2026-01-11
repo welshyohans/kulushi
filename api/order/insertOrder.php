@@ -63,15 +63,41 @@ $pricingStmt = $conn->prepare(
 try {
     $conn->beginTransaction();
 
-    if (!$order->create()) {
-        $conn->rollBack();
-        respond(500, 'error', 'Error creating order');
-    }
+    $order->profit = 0;
 
-    $order_id = $conn->lastInsertId();
+    $mergedIntoExisting = false;
+    $existingDeliverStatus = null;
+    $existingOrderStmt = $conn->prepare(
+        'SELECT id, deliver_status
+         FROM orders
+         WHERE customer_id = :customerId
+           AND deliver_status IN (1, 3)
+           AND order_time >= CURDATE()
+           AND order_time < (CURDATE() + INTERVAL 1 DAY)
+         ORDER BY order_time DESC
+         LIMIT 1
+         FOR UPDATE'
+    );
+    $existingOrderStmt->execute([':customerId' => $order->customer_id]);
+    $existingOrderRow = $existingOrderStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    $existingOrderId = $existingOrderRow['id'] ?? false;
+
+    if ($existingOrderId !== false) {
+        $order_id = (int)$existingOrderId;
+        $mergedIntoExisting = true;
+        $existingDeliverStatus = $existingOrderRow['deliver_status'] ?? null;
+    } else {
+        if (!$order->create()) {
+            $conn->rollBack();
+            respond(500, 'error', 'Error creating order');
+        }
+
+        $order_id = (int)$conn->lastInsertId();
+    }
 
     // CREATE ORDERED LIST
     $ordered_list = new OrderedList($conn);
+    $isPickupPricing = $mergedIntoExisting && ((int)$existingDeliverStatus === 3);
     foreach ($data->items as $item) {
         foreach (['supplierGoodsId', 'goodsId', 'quantity', 'unitPrice', 'subtotal', 'eligibleForCredit'] as $itemField) {
             if (!property_exists($item, $itemField)) {
@@ -85,13 +111,20 @@ try {
         $pricing = $pricingStmt->fetch(PDO::FETCH_ASSOC) ?: [];
         $supplierPrice = isset($pricing['supplier_price']) ? (float)$pricing['supplier_price'] : 0.0;
         $commission = isset($pricing['goods_commission']) ? (float)$pricing['goods_commission'] : 0.0;
+        $eachPrice = (float)$item->unitPrice;
         $lineProfit = $commission * $quantity;
+
+        if ($isPickupPricing) {
+            $eachPrice = max(0.0, round($eachPrice - $commission, 2));
+            $commission = 0.0;
+            $lineProfit = 0.0;
+        }
 
         $ordered_list->orders_id = $order_id;
         $ordered_list->supplier_goods_id = $supplierGoodsId;
         $ordered_list->goods_id = $item->goodsId;
         $ordered_list->quantity = $quantity;
-        $ordered_list->each_price = $item->unitPrice;
+        $ordered_list->each_price = $eachPrice;
         $ordered_list->supplier_price = $supplierPrice;
         $ordered_list->commission = $commission;
         $ordered_list->line_profit = $lineProfit;
@@ -105,12 +138,38 @@ try {
         $totalProfit += $lineProfit;
     }
 
-    $order->profit = $totalProfit;
-    $profitStmt = $conn->prepare('UPDATE orders SET profit = :profit WHERE id = :orderId');
-    $profitStmt->execute([
-        ':profit' => number_format($totalProfit, 2, '.', ''),
-        ':orderId' => $order_id
-    ]);
+    if ($mergedIntoExisting) {
+        $profitDelta = $isPickupPricing ? 0.0 : $totalProfit;
+        $totalDelta = (float)$order->total_price;
+        $cashDelta = (float)$order->cash_amount;
+        $creditDelta = (float)$order->credit_amount;
+        if ($isPickupPricing) {
+            $totalDelta = max(0.0, $totalDelta - $totalProfit);
+            $cashDelta = max(0.0, $cashDelta - $totalProfit);
+        }
+
+        $orderUpdateStmt = $conn->prepare(
+            'UPDATE orders
+             SET total_price = COALESCE(total_price, 0) + :totalDelta,
+                 cash_amount = COALESCE(cash_amount, 0) + :cashDelta,
+                 credit_amount = COALESCE(credit_amount, 0) + :creditDelta,
+                 profit = COALESCE(profit, 0) + :profitDelta
+             WHERE id = :orderId'
+        );
+        $orderUpdateStmt->execute([
+            ':totalDelta' => $totalDelta,
+            ':cashDelta' => $cashDelta,
+            ':creditDelta' => $creditDelta,
+            ':profitDelta' => number_format($profitDelta, 2, '.', ''),
+            ':orderId' => $order_id
+        ]);
+    } else {
+        $profitStmt = $conn->prepare('UPDATE orders SET profit = :profit WHERE id = :orderId');
+        $profitStmt->execute([
+            ':profit' => number_format($totalProfit, 2, '.', ''),
+            ':orderId' => $order_id
+        ]);
+    }
 
     $conn->commit();
 
@@ -121,7 +180,10 @@ try {
     }
 
     // Return status/message shape expected by OrderResponse
-    respond(201, 'success', "Order created successfully (id: {$order_id})");
+    $message = $mergedIntoExisting
+        ? "Order updated successfully (id: {$order_id})"
+        : "Order created successfully (id: {$order_id})";
+    respond(201, 'success', $message);
 } catch (Throwable $e) {
     if ($conn->inTransaction()) {
         $conn->rollBack();
