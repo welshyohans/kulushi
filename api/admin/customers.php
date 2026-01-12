@@ -71,8 +71,11 @@ try {
         }
 
         if ($search !== '') {
-            $where[] = '(c.name LIKE :search OR c.phone LIKE :search OR c.shop_name LIKE :search)';
-            $params[':search'] = '%' . $search . '%';
+            $where[] = '(c.name LIKE :search1 OR c.phone LIKE :search2 OR c.shop_name LIKE :search3)';
+            $searchPattern = '%' . $search . '%';
+            $params[':search1'] = $searchPattern;
+            $params[':search2'] = $searchPattern;
+            $params[':search3'] = $searchPattern;
         }
 
         // Build dynamic SELECT columns based on what exists
