@@ -71,6 +71,11 @@ try {
         ]);
     }
 
+    $customerTotalsStmt = $db->prepare('SELECT COALESCE(total_unpaid, 0) AS total_unpaid FROM customer WHERE id = :customerId LIMIT 1');
+    $customerTotalsStmt->execute([':customerId' => $customerId]);
+    $customerTotalsRow = $customerTotalsStmt->fetch() ?: ['total_unpaid' => 0];
+    $customerTotalUnpaid = (float)$customerTotalsRow['total_unpaid'];
+
     $ordersStmt = $db->prepare(
         'SELECT id,total_price, order_time, deliver_status, unpaid_cash, unpaid_credit
          FROM orders
@@ -108,7 +113,7 @@ try {
         ':historyStartDate' => $historyStartDate
     ]);
     $totalsRow = $totalsStmt->fetch() ?: ['total_unpaid_cash' => 0, 'total_unpaid_credit' => 0];
-    $totalUnpaidCash = (float)$totalsRow['total_unpaid_cash'];
+    $totalUnpaidCash = $customerTotalUnpaid;
     $totalUnpaidCredit = (float)$totalsRow['total_unpaid_credit'];
 
     $paymentsStmt = $db->prepare(

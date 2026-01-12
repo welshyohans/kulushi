@@ -97,11 +97,13 @@ try {
 
     $hasCustomerRegisterAt = $hasCustomerTable && $columnExists($db, 'customer', 'register_at');
     $hasCustomerTotalCredit = $hasCustomerTable && $columnExists($db, 'customer', 'total_credit');
+    $hasCustomerTotalUnpaid = $hasCustomerTable && $columnExists($db, 'customer', 'total_unpaid');
 
     $missingCustomerColumns = [];
     if ($hasCustomerTable) {
         if (!$hasCustomerRegisterAt) { $missingCustomerColumns[] = 'register_at'; }
         if (!$hasCustomerTotalCredit) { $missingCustomerColumns[] = 'total_credit'; }
+        if (!$hasCustomerTotalUnpaid) { $missingCustomerColumns[] = 'total_unpaid'; }
         if ($missingCustomerColumns) {
             $warnings[] = 'customer table missing columns: ' . implode(', ', $missingCustomerColumns) . '.';
         }
@@ -246,6 +248,29 @@ try {
         $creditRow = ['total_credit' => 0];
     }
 
+    // Total unpaid (already includes manual_credit after recalculation)
+    if ($hasCustomerTable && $hasCustomerTotalUnpaid && $hasIsLead) {
+        $unpaidStmt = $db->prepare(
+            'SELECT COALESCE(SUM(COALESCE(total_unpaid, 0)), 0) AS total_unpaid
+             FROM customer
+             WHERE COALESCE(is_lead, 0) = 0'
+        );
+    } elseif ($hasCustomerTable && $hasCustomerTotalUnpaid) {
+        $unpaidStmt = $db->prepare(
+            'SELECT COALESCE(SUM(COALESCE(total_unpaid, 0)), 0) AS total_unpaid
+             FROM customer'
+        );
+    } else {
+        $unpaidStmt = null;
+    }
+
+    if ($unpaidStmt) {
+        $unpaidStmt->execute();
+        $unpaidRow = $unpaidStmt->fetch() ?: ['total_unpaid' => 0];
+    } else {
+        $unpaidRow = ['total_unpaid' => 0];
+    }
+
     // Trend data
     $trendEnd = clone $date;
     $trendStart = (clone $date)->modify('-' . ($days - 1) . ' days');
@@ -325,7 +350,8 @@ try {
             'dailySupplierCost' => $supplierCost,
             'newCustomersRegistered' => (int)$newCustomersRow['total'],
             'newCustomersOrdered' => (int)$newOrdersRow['total'],
-            'totalCredit' => (float)$creditRow['total_credit']
+            'totalCredit' => (float)$creditRow['total_credit'],
+            'totalUnpaid' => (float)$unpaidRow['total_unpaid']
         ],
         'trends' => $trend,
         'schema_status' => [
@@ -339,6 +365,7 @@ try {
             'has_order_customer_id' => $hasOrderCustomerId,
             'has_customer_register_at' => $hasCustomerRegisterAt,
             'has_customer_total_credit' => $hasCustomerTotalCredit,
+            'has_customer_total_unpaid' => $hasCustomerTotalUnpaid,
             'has_supplier_price' => $hasSupplierPrice,
             'has_daily_expenses' => $hasDailyExpenses,
             'has_is_lead' => $hasIsLead,

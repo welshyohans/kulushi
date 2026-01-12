@@ -86,6 +86,7 @@ if ($deliverStatus === false) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../lib/CustomerFinancials.php';
 
 try {
     $database = new Database();
@@ -109,6 +110,10 @@ try {
              o.id,
              o.customer_id,
              o.deliver_status,
+             o.cash_amount,
+             o.credit_amount,
+             o.unpaid_cash,
+             o.unpaid_credit,
              c.permitted_credit,
              c.total_credit,
              c.total_unpaid
@@ -136,7 +141,11 @@ try {
     $currentDeliverStatus = isset($orderRow['deliver_status']) ? (int)$orderRow['deliver_status'] : 0;
     $permittedCredit = isset($orderRow['permitted_credit']) ? (float)$orderRow['permitted_credit'] : 0.0;
     $customerTotalCredit = isset($orderRow['total_credit']) ? (float)$orderRow['total_credit'] : 0.0;
-    $availableCredit = max($permittedCredit - $customerTotalCredit, 0.0);
+    $orderOutstandingCredit = ($currentDeliverStatus === 6 && isset($orderRow['unpaid_credit']))
+        ? max((float)$orderRow['unpaid_credit'], 0.0)
+        : 0.0;
+    $baseTotalCredit = max($customerTotalCredit - $orderOutstandingCredit, 0.0);
+    $availableCredit = max($permittedCredit - $baseTotalCredit, 0.0);
 
     $messageParts = [];
 
@@ -160,26 +169,29 @@ try {
         $messageParts[] = 'Order deliver status updated to ordered.';
     } elseif ($deliverStatus === 6) {
         $financials = recalcOrderFinancials($db, $orderId, $availableCredit);
+        $paidTotal = 0.0;
+        if ($currentDeliverStatus === 6) {
+            $oldCashAmount = isset($orderRow['cash_amount']) ? (float)$orderRow['cash_amount'] : 0.0;
+            $oldCreditAmount = isset($orderRow['credit_amount']) ? (float)$orderRow['credit_amount'] : 0.0;
+            $oldUnpaidCash = isset($orderRow['unpaid_cash']) ? (float)$orderRow['unpaid_cash'] : 0.0;
+            $oldUnpaidCredit = isset($orderRow['unpaid_credit']) ? (float)$orderRow['unpaid_credit'] : 0.0;
+            $paidTotal = max(($oldCashAmount + $oldCreditAmount) - ($oldUnpaidCash + $oldUnpaidCredit), 0.0);
+        }
+
+        // Preserve any already-paid amount when re-delivering/recalculating.
+        $paidToCash = min((float)$financials['cash'], $paidTotal);
+        $remainingPaid = $paidTotal - $paidToCash;
+        $paidToCredit = min((float)$financials['credit'], max($remainingPaid, 0.0));
+
         $unpaid = [
-            'cash' => $financials['cash'],
-            'credit' => $financials['credit']
+            'cash' => max((float)$financials['cash'] - $paidToCash, 0.0),
+            'credit' => max((float)$financials['credit'] - $paidToCredit, 0.0)
         ];
+
         updateOrderFinancials($db, $orderId, $financials, $deliverStatus, $unpaid);
 
-        if ($currentDeliverStatus !== 6) {
-            $customerUpdate = $db->prepare(
-                'UPDATE customer
-                 SET total_credit = total_credit + :creditDelta,
-                     total_unpaid = total_unpaid + :unpaidDelta
-                 WHERE id = :customerId'
-            );
-            $customerUpdate->execute([
-                ':creditDelta' => formatMoney($financials['credit']),
-                ':unpaidDelta' => formatMoney($financials['total']),
-                ':customerId' => $customerId
-            ]);
-            $messageParts[] = 'Customer totals updated with delivered amounts.';
-        }
+        // Always recalc totals from source-of-truth (orders + manual credit).
+        CustomerFinancials::recalcCustomerTotals($db, $customerId);
         $messageParts[] = 'Order marked as delivered and totals recalculated.';
     } elseif ($deliverStatus === 7) {
         $cancelStmt = $db->prepare(
@@ -194,6 +206,11 @@ try {
         $financials['credit'] = 0.0;
         $financials['total'] = 0.0;
         updateOrderFinancials($db, $orderId, $financials, $deliverStatus, ['cash' => 0.0, 'credit' => 0.0]);
+
+        if ($currentDeliverStatus === 6) {
+            CustomerFinancials::recalcCustomerTotals($db, $customerId);
+            $messageParts[] = 'Customer totals recalculated after cancellation.';
+        }
 
         $messageParts[] = 'Order cancelled and items marked inactive.';
     } else {
@@ -210,6 +227,11 @@ try {
                 ':orderId' => $orderId
             ]);
             $messageParts[] = 'Order deliver status updated.';
+
+            if ($currentDeliverStatus === 6 && $deliverStatus !== 6) {
+                CustomerFinancials::recalcCustomerTotals($db, $customerId);
+                $messageParts[] = 'Customer totals recalculated.';
+            }
         }
     }
 

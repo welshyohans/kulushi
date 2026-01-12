@@ -313,6 +313,167 @@
             }
         }
 
+        .customer-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+        }
+
+        .customer-card {
+            background: #fffdf7;
+            border-radius: var(--radius-md);
+            padding: 14px;
+            border: 1px solid rgba(38, 70, 83, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .customer-top {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .customer-title {
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .customer-sub {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 0.85rem;
+            line-height: 1.25;
+        }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .badge {
+            display: inline-flex;
+            gap: 6px;
+            align-items: baseline;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(38, 70, 83, 0.06);
+            border: 1px solid rgba(38, 70, 83, 0.08);
+            font-size: 0.8rem;
+        }
+
+        .badge strong {
+            font-size: 0.95rem;
+        }
+
+        .customer-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .btn.small {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+
+        .customer-more {
+            display: none;
+            background: rgba(38, 70, 83, 0.04);
+            border-radius: 14px;
+            padding: 12px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .customer-more.open {
+            display: block;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            z-index: 50;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-card {
+            position: relative;
+            width: min(880px, 100%);
+            max-height: min(86vh, 920px);
+            overflow: auto;
+            background: var(--card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            padding: 18px;
+            border: 1px solid rgba(38, 70, 83, 0.12);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-family: "Fraunces", serif;
+        }
+
+        .modal-subtitle {
+            margin: 6px 0 0;
+            color: var(--muted);
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(38, 70, 83, 0.12);
+            margin: 12px 0;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .history-box {
+            background: #fffdf7;
+            border-radius: 14px;
+            border: 1px solid rgba(38, 70, 83, 0.08);
+            padding: 12px;
+        }
+
+        .history-box h4 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+        }
+
+        .history-box ul {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 960px) {
 
             .panel.split,
@@ -360,6 +521,7 @@
                     <div class="stat-card"><span>New Customers Ordered</span><strong id="newCustomersOrdered">0</strong>
                     </div>
                     <div class="stat-card"><span>Total Credit</span><strong id="totalCredit">ETB 0</strong></div>
+                    <div class="stat-card"><span>Total Unpaid</span><strong id="totalUnpaid">ETB 0</strong></div>
                 </div>
                 <div class="trend">
                     <div class="chart-shell">
@@ -401,7 +563,7 @@
 
             <section class="panel split fade-in">
                 <h2>Customers & adjustments</h2>
-                <p>Segment and edit manual profit/loss/credit.</p>
+                <p>Filter by search/segment, then use Adjust to record reason-based entries.</p>
                 <div class="form-grid">
                     <input type="search" id="customerSearch" placeholder="Search name, phone, shop">
                     <select id="segmentFilter">
@@ -415,19 +577,7 @@
                         <option value="potential">potential</option>
                     </select>
                 </div>
-                <table class="table" id="customerTable">
-                    <thead>
-                        <tr>
-                            <th>Customer</th>
-                            <th>Segment</th>
-                            <th>Manual Profit</th>
-                            <th>Manual Loss</th>
-                            <th>Manual Credit</th>
-                            <th>Save</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="customer-list" id="customerList"></div>
             </section>
 
             <section class="panel third fade-in">
@@ -556,6 +706,54 @@
         </main>
     </div>
 
+    <div class="modal" id="adjustModal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal></div>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="adjustTitle">
+            <div class="modal-header">
+                <div>
+                    <h3 id="adjustTitle">Customer adjustments</h3>
+                    <p class="modal-subtitle" id="adjustSubtitle"></p>
+                </div>
+                <button class="btn secondary small" type="button" id="adjustCloseBtn">Close</button>
+            </div>
+
+            <div class="form-grid">
+                <select id="adjustSegment">
+                    <option value="new">new</option>
+                    <option value="active">active</option>
+                    <option value="loyal">loyal</option>
+                    <option value="vip">vip</option>
+                    <option value="at_risk">at_risk</option>
+                    <option value="churned">churned</option>
+                    <option value="potential">potential</option>
+                </select>
+                <button class="btn small" type="button" id="saveSegmentBtn">Save segment</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <form id="adjustmentForm">
+                <div class="form-grid">
+                    <select id="adjustType" required>
+                        <option value="credit">Manual credit</option>
+                        <option value="profit">Manual profit</option>
+                        <option value="loss">Manual loss</option>
+                    </select>
+                    <input type="number" step="0.01" id="adjustAmount" placeholder="Amount (ETB)" required>
+                    <input type="date" id="adjustDate" required>
+                    <input type="text" id="adjustReason" placeholder="Reason" required>
+                </div>
+                <div class="form-actions">
+                    <button class="btn secondary" type="submit">Add adjustment</button>
+                </div>
+            </form>
+
+            <div class="divider"></div>
+
+            <div class="history-grid" id="adjustHistory"></div>
+        </div>
+    </div>
+
     <script>
         const api = {
             overview: (date) => `../api/admin/overview.php?date=${encodeURIComponent(date)}`,
@@ -563,6 +761,10 @@
             customers: (params = {}) => {
                 const query = new URLSearchParams(params);
                 return `../api/admin/customers.php?${query.toString()}`;
+            },
+            customerAdjustments: (params = {}) => {
+                const query = new URLSearchParams(params);
+                return `../api/admin/customer_adjustments.php?${query.toString()}`;
             },
             leads: '../api/admin/leads.php',
             campaigns: '../api/admin/campaigns.php',
@@ -615,6 +817,15 @@
                 }
                 throw error;
             }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         function renderOverviewWarnings(warnings = []) {
@@ -696,6 +907,7 @@
             document.getElementById('newCustomers').textContent = metrics.newCustomersRegistered || 0;
             document.getElementById('newCustomersOrdered').textContent = metrics.newCustomersOrdered || 0;
             document.getElementById('totalCredit').textContent = formatETB(metrics.totalCredit);
+            document.getElementById('totalUnpaid').textContent = formatETB(metrics.totalUnpaid);
             drawTrend(data.trends || []);
         }
 
@@ -710,47 +922,105 @@
             });
         }
 
+        const adjustState = { customer: null };
+
+        function openAdjustModal(customer) {
+            adjustState.customer = customer;
+            document.getElementById('adjustSubtitle').textContent = `${customer.name || ''} • ${customer.phone || ''}`.trim();
+            document.getElementById('adjustSegment').value = customer.segment || 'new';
+            document.getElementById('adjustDate').value = state.date;
+            document.getElementById('adjustAmount').value = '';
+            document.getElementById('adjustReason').value = '';
+
+            document.getElementById('adjustModal').classList.add('open');
+            document.getElementById('adjustModal').setAttribute('aria-hidden', 'false');
+            loadAdjustmentHistory(customer.id);
+        }
+
+        function closeAdjustModal() {
+            adjustState.customer = null;
+            document.getElementById('adjustModal').classList.remove('open');
+            document.getElementById('adjustModal').setAttribute('aria-hidden', 'true');
+        }
+
+        function renderHistoryBox(title, items) {
+            const list = items && items.length
+                ? `<ul>${items.map(row => `<li>${escapeHtml(row.entry_date)}: ${formatETB(row.amount)} — ${escapeHtml(row.reason)}</li>`).join('')}</ul>`
+                : '<p class="modal-subtitle">No entries</p>';
+            return `<div class="history-box"><h4>${escapeHtml(title)}</h4>${list}</div>`;
+        }
+
+        async function loadAdjustmentHistory(customerId) {
+            const container = document.getElementById('adjustHistory');
+            container.innerHTML = '';
+            try {
+                const data = await fetchJson(api.customerAdjustments({ customerId, type: 'all', limit: 6 }));
+                const items = data.items || {};
+                container.innerHTML = [
+                    renderHistoryBox('Manual credit', items.credit || []),
+                    renderHistoryBox('Manual profit', items.profit || []),
+                    renderHistoryBox('Manual loss', items.loss || [])
+                ].join('');
+            } catch (error) {
+                container.innerHTML = `<div class="history-box"><h4>History</h4><p class="modal-subtitle">${escapeHtml(error.message || 'Failed to load')}</p></div>`;
+            }
+        }
+
         async function loadCustomers() {
             const search = document.getElementById('customerSearch').value;
             const segment = document.getElementById('segmentFilter').value;
-            const data = await fetchJson(api.customers({ search, segment, limit: 50 }));
-            const tbody = document.querySelector('#customerTable tbody');
-            tbody.innerHTML = '';
+            const data = await fetchJson(api.customers({ search, segment, limit: 80 }));
+            const container = document.getElementById('customerList');
+            container.innerHTML = '';
+
             (data.items || []).forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                <td>${item.name || ''}<br><small>${item.phone || ''}</small></td>
-                <td>
-                    <select data-segment>
-                        ${['new', 'active', 'loyal', 'vip', 'at_risk', 'churned', 'potential'].map(seg =>
-                    `<option value="${seg}" ${seg === item.segment ? 'selected' : ''}>${seg}</option>`).join('')}
-                    </select>
-                </td>
-                <td><input type="number" step="0.01" value="${item.manual_profit || 0}" data-profit></td>
-                <td><input type="number" step="0.01" value="${item.manual_loss || 0}" data-loss></td>
-                <td><input type="number" step="0.01" value="${item.manual_credit || 0}" data-credit></td>
-                <td><button class="btn" data-save>Save</button></td>
-            `;
-                row.querySelector('[data-save]').addEventListener('click', async () => {
-                    const segmentValue = row.querySelector('[data-segment]').value;
-                    await fetchJson('../api/admin/customers.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'update_segment', customerId: item.id, segment: segmentValue })
-                    });
-                    await fetchJson('../api/admin/customers.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action: 'update_financials',
-                            customerId: item.id,
-                            manualProfit: row.querySelector('[data-profit]').value,
-                            manualLoss: row.querySelector('[data-loss]').value,
-                            manualCredit: row.querySelector('[data-credit]').value
-                        })
-                    });
+                const totalCredit = Number(item.total_credit || 0);
+                const totalUnpaid = Number(item.total_unpaid || 0);
+                const manualLoss = Number(item.manual_loss || 0);
+                const manualProfit = Number(item.manual_profit || 0);
+                const manualCredit = Number(item.manual_credit || 0);
+                const commissionProfit = Number(item.commission_profit || 0);
+                const revenue = Number(item.revenue || 0);
+                const ordersCount = Number(item.orders_count || 0);
+                const totalProfit = commissionProfit + manualProfit;
+
+                const card = document.createElement('div');
+                card.className = 'customer-card';
+                card.innerHTML = `
+                    <div class="customer-top">
+                        <div>
+                            <p class="customer-title">${escapeHtml(item.name || '')}</p>
+                            <p class="customer-sub">${escapeHtml(item.phone || '')}${item.shop_name ? ` • ${escapeHtml(item.shop_name)}` : ''}</p>
+                            <div class="tag">${escapeHtml(item.segment || 'new')}</div>
+                        </div>
+                        <div class="customer-actions">
+                            <button class="btn small" type="button" data-more>More</button>
+                            <button class="btn secondary small" type="button" data-adjust>Adjust</button>
+                        </div>
+                    </div>
+                    <div class="badge-row">
+                        <div class="badge"><span>Total unpaid</span> <strong>${formatETB(totalUnpaid)}</strong></div>
+                        <div class="badge"><span>Total credit</span> <strong>${formatETB(totalCredit)}</strong></div>
+                        <div class="badge"><span>Total profit</span> <strong>${formatETB(totalProfit)}</strong></div>
+                        <div class="badge"><span>Total loss</span> <strong>${formatETB(manualLoss)}</strong></div>
+                    </div>
+                    <div class="customer-more" data-more-panel>
+                        <div>Revenue: <strong>${formatETB(revenue)}</strong></div>
+                        <div>Goods profit: <strong>${formatETB(commissionProfit)}</strong></div>
+                        <div>Manual profit: <strong>${formatETB(manualProfit)}</strong></div>
+                        <div>Manual credit: <strong>${formatETB(manualCredit)}</strong></div>
+                        <div>Orders: <strong>${ordersCount}</strong></div>
+                        <div>Registered: <strong>${escapeHtml(item.register_at || '')}</strong></div>
+                    </div>
+                `;
+
+                const panel = card.querySelector('[data-more-panel]');
+                card.querySelector('[data-more]').addEventListener('click', () => {
+                    panel.classList.toggle('open');
                 });
-                tbody.appendChild(row);
+                card.querySelector('[data-adjust]').addEventListener('click', () => openAdjustModal(item));
+
+                container.appendChild(card);
             });
         }
 
@@ -840,6 +1110,50 @@
         document.getElementById('customerSearch').addEventListener('input', () => {
             clearTimeout(window.customerSearchTimer);
             window.customerSearchTimer = setTimeout(loadCustomers, 300);
+        });
+
+        document.getElementById('adjustCloseBtn').addEventListener('click', closeAdjustModal);
+        document.querySelector('#adjustModal [data-close-modal]').addEventListener('click', closeAdjustModal);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && document.getElementById('adjustModal').classList.contains('open')) {
+                closeAdjustModal();
+            }
+        });
+
+        document.getElementById('saveSegmentBtn').addEventListener('click', async () => {
+            if (!adjustState.customer) {
+                return;
+            }
+            const segmentValue = document.getElementById('adjustSegment').value;
+            await fetchJson('../api/admin/customers.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update_segment', customerId: adjustState.customer.id, segment: segmentValue })
+            });
+            await loadCustomers();
+        });
+
+        document.getElementById('adjustmentForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!adjustState.customer) {
+                return;
+            }
+            await fetchJson('../api/admin/customer_adjustments.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerId: adjustState.customer.id,
+                    type: document.getElementById('adjustType').value,
+                    amount: document.getElementById('adjustAmount').value,
+                    entryDate: document.getElementById('adjustDate').value,
+                    reason: document.getElementById('adjustReason').value
+                })
+            });
+            document.getElementById('adjustAmount').value = '';
+            document.getElementById('adjustReason').value = '';
+            await loadAdjustmentHistory(adjustState.customer.id);
+            await loadCustomers();
+            await loadOverview();
         });
 
         document.getElementById('expenseForm').addEventListener('submit', async (event) => {

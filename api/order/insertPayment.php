@@ -80,6 +80,7 @@ if ($through === '') {
 $additionalInfo = trim((string)$data['additionalInfo']);
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../lib/CustomerFinancials.php';
 
 try {
     $database = new Database();
@@ -238,26 +239,44 @@ try {
         }
     }
 
-    $totalsStmt = $db->prepare(
-        'SELECT
-            COALESCE(SUM(unpaid_credit), 0) AS total_credit,
-            COALESCE(SUM(unpaid_cash), 0) AS total_cash
-        FROM orders
-        WHERE customer_id = :customerId
-          AND deliver_status = 6'
-    );
-    $totalsStmt->execute([':customerId' => $customerId]);
-    $totals = $totalsStmt->fetch() ?: ['total_credit' => 0, 'total_cash' => 0];
-    $totalCreditValue = (int)$totals['total_credit'];
-    $totalCashValue = (int)$totals['total_cash'];
-    $totalUnpaidValue = $totalCreditValue + $totalCashValue;
+    // If money remains after settling orders, pay down manual credit (if enabled).
+    if ($remaining > 0 && CustomerFinancials::columnExists($db, 'customer', 'manual_credit')) {
+        $manualCreditRowStmt = $db->prepare('SELECT COALESCE(manual_credit, 0) AS manual_credit FROM customer WHERE id = :customerId LIMIT 1 FOR UPDATE');
+        $manualCreditRowStmt->execute([':customerId' => $customerId]);
+        $manualCreditRow = $manualCreditRowStmt->fetch() ?: ['manual_credit' => 0];
+        $manualCredit = (float)$manualCreditRow['manual_credit'];
 
-    $customerUpdateStmt = $db->prepare('UPDATE customer SET total_credit = :totalCredit, total_unpaid = :totalUnpaid WHERE id = :customerId');
-    $customerUpdateStmt->execute([
-        ':totalCredit' => $totalCreditValue,
-        ':totalUnpaid' => $totalUnpaidValue,
-        ':customerId' => $customerId
-    ]);
+        if ($manualCredit > 0) {
+            $deduct = min($manualCredit, (float)$remaining);
+
+            if (CustomerFinancials::tableExists($db, 'customer_manual_credit_entries')) {
+                $reason = 'Payment: ' . $through . ($additionalInfo !== '' ? ' - ' . $additionalInfo : '');
+                $insertManual = $db->prepare(
+                    'INSERT INTO customer_manual_credit_entries (customer_id, entry_date, amount, reason)
+                     VALUES (:customerId, :entryDate, :amount, :reason)'
+                );
+                $insertManual->execute([
+                    ':customerId' => $customerId,
+                    ':entryDate' => date('Y-m-d'),
+                    ':amount' => CustomerFinancials::formatMoney(-$deduct),
+                    ':reason' => $reason
+                ]);
+
+                CustomerFinancials::syncManualTotalsFromLedgers($db, $customerId);
+            } else {
+                $updateManual = $db->prepare('UPDATE customer SET manual_credit = :value WHERE id = :customerId');
+                $updateManual->execute([
+                    ':value' => CustomerFinancials::formatMoney($manualCredit - $deduct),
+                    ':customerId' => $customerId
+                ]);
+            }
+
+            $remaining -= $deduct;
+        }
+    }
+
+    $customerTotals = CustomerFinancials::recalcCustomerTotals($db, $customerId);
+    $totalUnpaidValue = (float)$customerTotals['total_unpaid'];
 
     $paymentInsertStmt = $db->prepare(
         'INSERT INTO payments (customer_id, amount, `through`, additional_info, credit_left_after_payment)
@@ -268,7 +287,7 @@ try {
         ':amount' => $amount,
         ':through' => $through,
         ':additionalInfo' => $additionalInfo,
-        ':remainingCredit' => $totalUnpaidValue
+        ':remainingCredit' => (int)round($totalUnpaidValue)
     ]);
 
     $db->commit();

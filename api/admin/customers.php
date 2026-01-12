@@ -82,6 +82,7 @@ try {
             'c.phone',
             'c.shop_name',
             'c.total_credit',
+            'c.total_unpaid',
             'c.register_at'
         ];
 
