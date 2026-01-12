@@ -52,7 +52,7 @@ if ($customerId === false) {
     ]);
 }
 
-$historyStartDate = '2026-01-09 00:00:00';
+$historyStartDate = '2026-01-10 00:00:00';
 
 try {
     $database = new Database();
