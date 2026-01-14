@@ -208,6 +208,9 @@ try {
         $dueDate = (string)$dueVal;
     }
 
+    $segment = isset($customer['segment']) ? (string)$customer['segment'] : '';
+    $showCampaign = in_array($segment, ['loyal', 'vip'], true) ? 1 : 0;
+
     $settingsSnapshot = [
         'customerId' => $customerId,
         'shopName' => (string)$customer['shop_name'],
@@ -220,6 +223,7 @@ try {
         'permittedCredit' => $permittedCredit,
         'userType' => (string)($customer['user_type'] ?? ''),
         'lastUpdateCode' => (string)$currentLastCode,
+        'showCampaign' => $showCampaign,
         // due date from credit table (oldest where paid < total)
         'dueDate' => $dueDate,
         // use the chosen column value here
