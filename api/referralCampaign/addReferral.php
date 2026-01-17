@@ -162,7 +162,9 @@ try {
         $sms = new SMS();
         $nationalPhone = substr($phone, -9);
         $recipient = '+251' . $nationalPhone;
-        $message = "Welcome to Merkato Pro. Your password is {$passwordForNewCustomer}.";
+        $registrarName = trim((string)($registrar['name'] ?? ''));
+        $inviter = $registrarName !== '' ? $registrarName : 'your friend';
+        $message = "Welcome to Merkato Pro. You are invited to use Merkato Pro by {$inviter}. You can login using this password: {$passwordForNewCustomer}.";
         $sms->sendSms($recipient, $message);
     }
 

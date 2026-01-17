@@ -228,7 +228,7 @@ try {
         'dueDate' => $dueDate,
         // use the chosen column value here
         'fcmCode' => (string)($customer[$fcmColumn] ?? ''),
-        'geminiApiKey'=>getenv('GEMINI_API_KEY') ?: '',
+        'geminiApiKey'=>getenv('openRouterApiKey') ?: '',
         // Legacy keys kept for backward compatibility
         'customerName' => (string)$customer['name'],
         'customerShopName' => (string)$customer['shop_name'],
