@@ -1,11 +1,14 @@
-const CACHE_NAME = 'mpro-cache-v1';
+const CACHE_NAME = 'mpro-cache-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
   './login.html',
   './orderHistory.html',
+  './order_history.html',
   './shop.html',
   './manifest.webmanifest',
+  './pwa.js',
+  './assets/js/mpro-runtime.js',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png'
 ];

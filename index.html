@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>MerKato Pro — Mobile</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#ffffff">
+    <meta name="color-scheme" content="light dark">
+    <meta name="mpro-api-base" content="">
     <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -577,7 +580,7 @@
     <div class="offcanvas-body p-0 position-relative">
         <button type="button" class="btn-close position-absolute top-0 end-0 m-3 bg-white p-2 rounded-circle shadow-sm" data-bs-dismiss="offcanvas" style="z-index:10; opacity:1"></button>
         
-        <img id="detailImage" src="" class="w-100 object-fit-cover" style="height: 350px; background:#f0f0f0" alt="Product">
+        <img id="detailImage" src="" class="w-100 object-fit-cover" style="height: 350px; background:#f0f0f0" loading="lazy" decoding="async" alt="Product">
         
         <div class="p-4 position-relative bg-white" style="border-radius: 24px 24px 0 0; margin-top: -24px;">
             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -663,7 +666,8 @@
 <!-- Toasts -->
 <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" id="toastContainer" style="z-index: 2000;"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="./assets/js/mpro-runtime.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 
 <!-- LOGIC SCRIPT (Adapted for Mobile Redesign) -->
 <script type="module">
@@ -671,28 +675,23 @@
     const sessionKey = 'mproSession';
     const cartKey = 'mproCartItems';
 
-    const buildApiUrl = (path, params = {}) => {
-        const query = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
-            if(value === undefined || value === null || value === '') return;
-            query.append(key, value);
-        });
-        const qs = query.toString();
-        return qs ? `${path}?${qs}` : path;
-    };
+    const apiUrl = (path) => (window.MPRO?.apiUrl ? window.MPRO.apiUrl(path) : path);
+    const buildApiUrl = (path, params = {}) => (
+        window.MPRO?.buildApiUrl ? window.MPRO.buildApiUrl(path, params) : path
+    );
     
     const API = {
         featuredGoods: (params = {}) => buildApiUrl('api/dashboard/getFeaturedGoods.php', params),
         goodsByCategory: (categoryId, params = {}) => buildApiUrl('api/dashboard/getGoodsByCategory.php', { ...params, categoryId }),
         goodsBySupplier: (supplierId, params = {}) => buildApiUrl('api/dashboard/getGoodsBySupplier.php', { ...params, supplierId }),
-        supplierOptions: (goodsId) => `api/dashboard/getSupplierGoodsOptions.php?goodsId=${goodsId}`,
-        categories: 'api/dashboard/getCategories.php',
-        suppliers: 'api/dashboard/getSuppliers.php',
-        profile: 'api/customer/profile.php',
-        comments: 'api/comment/getComments.php',
-        orderFromCart: 'api/order/createFromCart.php',
-        registerFriend: 'api/customer/registerYourFriend.php',
-        addresses: 'api/address/getAllAddress.php'
+        supplierOptions: (goodsId) => buildApiUrl('api/dashboard/getSupplierGoodsOptions.php', { goodsId }),
+        categories: apiUrl('api/dashboard/getCategories.php'),
+        suppliers: apiUrl('api/dashboard/getSuppliers.php'),
+        profile: apiUrl('api/customer/profile.php'),
+        comments: apiUrl('api/comment/getComments.php'),
+        orderFromCart: apiUrl('api/order/createFromCart.php'),
+        registerFriend: apiUrl('api/customer/registerYourFriend.php'),
+        addresses: apiUrl('api/address/getAllAddress.php')
     };
 
     const imagePlaceholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
@@ -1064,7 +1063,7 @@
                  role="button"
                  tabindex="0"
                  onclick="handleSupplierClick(event, ${s.shopId})">
-                <img src="${avatar}" class="supplier-story-img" alt="${s.shopName}">
+                <img src="${avatar}" class="supplier-story-img" loading="lazy" decoding="async" alt="${s.shopName}">
                 <span>${s.shopName}</span>
             </div>
         `;}).join('');
@@ -1488,7 +1487,7 @@
             totalQuantity += i.quantity;
             return `
                 <div class="cart-item-mobile">
-                    <img src="${i.img || imagePlaceholder}" alt="${i.name || 'Goods'}">
+                    <img src="${i.img || imagePlaceholder}" loading="lazy" decoding="async" alt="${i.name || 'Goods'}">
                     <div class="flex-grow-1">
                         <div class="fw-bold line-clamp-1">${i.name}</div>
                         <div class="text-primary small">Price: ETB ${unitPrice.toLocaleString()}</div>

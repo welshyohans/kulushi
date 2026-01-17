@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>MerKato Pro — Order history</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#2b59ff">
+    <meta name="color-scheme" content="light dark">
+    <meta name="mpro-api-base" content="">
     <link rel="manifest" href="manifest.webmanifest">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
@@ -153,13 +156,15 @@
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
     crossorigin="anonymous"
 ></script>
+<script src="./assets/js/mpro-runtime.js"></script>
 <script src="pwa.js"></script>
 <script>
     (function () {
         const sessionKey = 'mproSession';
+        const apiUrl = (path) => (window.MPRO?.apiUrl ? window.MPRO.apiUrl(path) : path);
         const API = {
-            orders: 'api/order/getHistory.php',
-            orderDetail: 'api/order/getorderListHistory.php'
+            orders: apiUrl('api/order/getHistory.php'),
+            orderDetail: apiUrl('api/order/getorderListHistory.php')
         };
 
         const elements = {
@@ -346,7 +351,7 @@
                 <div class="order-items-list d-flex flex-column gap-3">
                     ${items.map(item => `
                         <div class="d-flex gap-3 align-items-center border rounded-3 p-2">
-                            <img src="${item.goodsImage || 'https://via.placeholder.com/80'}" alt="${item.goodsName}">
+                            <img src="${item.goodsImage || 'https://via.placeholder.com/80'}" loading="lazy" decoding="async" alt="${item.goodsName}">
                             <div class="flex-grow-1">
                                 <div class="fw-semibold">${item.goodsName || 'Goods'}</div>
                                 <div class="text-muted small">${item.supplierName || ''}</div>
