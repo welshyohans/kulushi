@@ -25,6 +25,12 @@
     const raw = (value || '').toString().trim();
     if (!raw) return '';
     try {
+      // First, try to parse as an absolute URL (e.g., https://astemaripro.com/kulushi/)
+      if (raw.startsWith('http://') || raw.startsWith('https://')) {
+        const url = new URL(raw);
+        return url.href.endsWith('/') ? url.href : url.href + '/';
+      }
+      // Fall back to relative URL resolution
       const url = new URL(raw, window.location.origin + '/');
       return url.href.endsWith('/') ? url.href : url.href + '/';
     } catch (_) {
