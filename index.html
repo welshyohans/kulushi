@@ -359,6 +359,27 @@
             opacity: 1;
         }
 
+        /* Text placeholder for invalid images */
+        .img-text-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1rem;
+            line-height: 1.3;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            word-break: break-word;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
         /* Loader & Skeleton */
         .skeleton {
             background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
@@ -1175,14 +1196,22 @@
                 const price = g.primarySupplier?.price || g.lowestPrice || 0;
                 const cartItem = state.cart.find(i => i.goodsId == g.goodsId);
                 const qty = cartItem ? cartItem.quantity : 0;
-                const imageUrl = g.imageUrl || 'https://via.placeholder.com/200';
+                const rawImageUrl = g.imageUrl || '';
                 const supplierLabel = g.supplierName || g.primarySupplier?.shopName || 'Supplier';
                 const productName = g.name || 'Product';
+
+                // Check if image URL is valid (ends with .jpg or .png)
+                const isValidImage = rawImageUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(rawImageUrl);
+                const imageUrl = isValidImage ? rawImageUrl : '';
 
                 return `
             <article class="mobile-card" onclick="openDetail(${g.goodsId})">
                 <div class="mobile-card-img-wrapper">
-                    <img src="${imagePlaceholder}" data-src="${imageUrl}" class="mobile-card-img lazy-img" loading="lazy" alt="${productName}">
+                    ${isValidImage ? `
+                        <img src="${imagePlaceholder}" data-src="${imageUrl}" class="mobile-card-img lazy-img" loading="lazy" alt="${productName}">
+                    ` : `
+                        <div class="img-text-placeholder">${productName}</div>
+                    `}
                     ${g.discount ? `<span class="position-absolute top-0 start-0 badge bg-danger m-2">-${g.discount}%</span>` : ''}
                 </div>
                 <div class="mobile-card-body">
@@ -1543,9 +1572,15 @@
                 const itemTotal = (unitPrice + unitCommission) * i.quantity;
                 total += itemTotal;
                 totalQuantity += i.quantity;
+                const rawImg = i.img || '';
+                const isValidImg = rawImg && /\.(jpg|jpeg|png|gif|webp)$/i.test(rawImg);
                 return `
                 <div class="cart-item-mobile">
-                    <img src="${i.img || imagePlaceholder}" loading="lazy" decoding="async" alt="${i.name || 'Goods'}">
+                    ${isValidImg ? `
+                        <img src="${rawImg}" loading="lazy" decoding="async" alt="${i.name || 'Goods'}">
+                    ` : `
+                        <div style="width:70px;height:70px;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:0.7rem;text-align:center;padding:4px;">${i.name || 'Goods'}</div>
+                    `}
                     <div class="flex-grow-1">
                         <div class="fw-bold line-clamp-1">${i.name}</div>
                         <div class="text-primary small">Price: ETB ${unitPrice.toLocaleString()}</div>
@@ -1577,7 +1612,28 @@
             const g = state.goods.find(x => x.goodsId == id);
             if (!g) return;
 
-            els.detailImg.src = g.imageUrl || imagePlaceholder;
+            const rawImageUrl = g.imageUrl || '';
+            const isValidDetailImage = rawImageUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(rawImageUrl);
+
+            if (isValidDetailImage) {
+                els.detailImg.src = rawImageUrl;
+                els.detailImg.style.display = 'block';
+                els.detailImg.nextElementSibling?.remove(); // Remove any existing text placeholder
+            } else {
+                els.detailImg.src = imagePlaceholder;
+                els.detailImg.style.display = 'none';
+                // Insert text placeholder if not already present
+                const existingPlaceholder = els.detailImg.parentElement.querySelector('.detail-img-text-placeholder');
+                if (!existingPlaceholder) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'detail-img-text-placeholder';
+                    placeholder.style = 'width:100%;height:350px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.5rem;text-align:center;padding:2rem;text-shadow:0 2px 4px rgba(0,0,0,0.3);';
+                    placeholder.textContent = g.name || 'Product';
+                    els.detailImg.insertAdjacentElement('afterend', placeholder);
+                } else {
+                    existingPlaceholder.textContent = g.name || 'Product';
+                }
+            }
             els.detailName.textContent = g.name;
             els.detailPrice.textContent = `ETB ${(g.primarySupplier?.price || g.lowestPrice).toLocaleString()}`;
             els.detailDesc.textContent = g.description || 'No description.';
