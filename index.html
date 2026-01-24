@@ -737,7 +737,6 @@
     <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" id="toastContainer"
         style="z-index: 2000;"></div>
 
-    <script src="./assets/js/mpro-runtime.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 
     <!-- LOGIC SCRIPT (Adapted for Mobile Redesign) -->
@@ -747,7 +746,19 @@
         const cartKey = 'mproCartItems';
 
         const API_BASE = 'https://astemaripro.com/kulushi/';
+        const IMAGE_BASE = 'https://astemaripro.com/kulushi/';
 
+        // Helper to resolve image URLs - prefix with base if relative
+        function resolveImageUrl(url) {
+            if (!url) return '';
+            // If already absolute URL, return as is
+            if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+                return url;
+            }
+            // Remove leading slash if present
+            const cleanPath = url.replace(/^\/+/, '');
+            return IMAGE_BASE + cleanPath;
+        }
         const buildApiUrl = (path, params = {}) => {
             const url = new URL(path, API_BASE);
             Object.entries(params).forEach(([key, value]) => {
@@ -1135,13 +1146,20 @@
             }
 
             const html = visibleSuppliers.map(s => {
-                const avatar = s.image || s.logo || 'https://via.placeholder.com/60';
+                const rawAvatar = s.image || s.logo || '';
+                const isValidAvatar = rawAvatar && /\.(jpg|jpeg|png|gif|webp)$/i.test(rawAvatar);
+                const avatarUrl = isValidAvatar ? resolveImageUrl(rawAvatar) : '';
+                const initials = (s.shopName || 'S').substring(0, 2).toUpperCase();
                 return `
             <div class="supplier-story ${state.activeSupplier === s.shopId ? 'active' : ''}"
                  role="button"
                  tabindex="0"
                  onclick="handleSupplierClick(event, ${s.shopId})">
-                <img src="${avatar}" class="supplier-story-img" loading="lazy" decoding="async" alt="${s.shopName}">
+                ${isValidAvatar ? `
+                    <img src="${avatarUrl}" class="supplier-story-img" loading="lazy" decoding="async" alt="${s.shopName}">
+                ` : `
+                    <div class="supplier-story-img" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-weight:700;font-size:1rem;">${initials}</div>
+                `}
                 <span>${s.shopName}</span>
             </div>
         `;
@@ -1202,7 +1220,7 @@
 
                 // Check if image URL is valid (ends with .jpg or .png)
                 const isValidImage = rawImageUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(rawImageUrl);
-                const imageUrl = isValidImage ? rawImageUrl : '';
+                const imageUrl = isValidImage ? resolveImageUrl(rawImageUrl) : '';
 
                 return `
             <article class="mobile-card" onclick="openDetail(${g.goodsId})">
@@ -1574,10 +1592,11 @@
                 totalQuantity += i.quantity;
                 const rawImg = i.img || '';
                 const isValidImg = rawImg && /\.(jpg|jpeg|png|gif|webp)$/i.test(rawImg);
+                const cartImgUrl = isValidImg ? resolveImageUrl(rawImg) : '';
                 return `
                 <div class="cart-item-mobile">
                     ${isValidImg ? `
-                        <img src="${rawImg}" loading="lazy" decoding="async" alt="${i.name || 'Goods'}">
+                        <img src="${cartImgUrl}" loading="lazy" decoding="async" alt="${i.name || 'Goods'}">
                     ` : `
                         <div style="width:70px;height:70px;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:0.7rem;text-align:center;padding:4px;">${i.name || 'Goods'}</div>
                     `}
@@ -1614,9 +1633,10 @@
 
             const rawImageUrl = g.imageUrl || '';
             const isValidDetailImage = rawImageUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(rawImageUrl);
+            const detailImgUrl = isValidDetailImage ? resolveImageUrl(rawImageUrl) : '';
 
             if (isValidDetailImage) {
-                els.detailImg.src = rawImageUrl;
+                els.detailImg.src = detailImgUrl;
                 els.detailImg.style.display = 'block';
                 els.detailImg.nextElementSibling?.remove(); // Remove any existing text placeholder
             } else {
