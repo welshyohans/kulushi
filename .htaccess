@@ -1,0 +1,51 @@
+# Enable RewriteEngine
+RewriteEngine On
+
+# Set the base directory (adjust if your app is in a subdirectory)
+RewriteBase /kulushi/
+
+# ===== PRETTY URLs - Remove .php extension =====
+
+# If the request is for a directory, don't rewrite
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# If the request is for an existing file, don't rewrite
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# If request.php exists, rewrite to it (handles /api/path/file -> /api/path/file.php)
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L,QSA]
+
+# ===== CORS Headers for API =====
+<IfModule mod_headers.c>
+    # Allow requests from any origin (adjust for production if needed)
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
+
+# ===== Handle OPTIONS preflight requests =====
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# ===== Error Documents =====
+ErrorDocument 404 /kulushi/api/errors/404.json
+ErrorDocument 500 /kulushi/api/errors/500.json
+
+# ===== Security Headers =====
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# ===== Disable directory listing =====
+Options -Indexes
+
+# ===== Protect sensitive files =====
+<FilesMatch "\.(env|htaccess|htpasswd|ini|log|sh|sql)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
