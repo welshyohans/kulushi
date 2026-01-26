@@ -149,6 +149,9 @@ $fcmCode = array_key_exists('fcmCode', $data) ? trim((string)$data['fcmCode']) :
 try {
     $database = new Database();
     $db = $database->connect();
+    if (!$db instanceof PDO) {
+        $response(500, ['success' => false, 'message' => 'Database connection failed']);
+    }
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $db->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);

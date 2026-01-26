@@ -34,7 +34,8 @@ class Database{
             $this->conn = new PDO($dsn,$this->username,$this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }catch(PDOException $e){
-            echo "Error connection" . $e->getMessage();
+            // Leave error handling to callers so APIs can return clean JSON.
+            $this->conn = null;
         }
         return $this->conn;
 
